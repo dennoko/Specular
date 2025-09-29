@@ -58,8 +58,7 @@ namespace lilToon
 
             // If you want to change rendering modes in the editor, specify the shader here
             ReplaceToCustomShaders();
-            //isShowRenderMode = !material.shader.name.Contains("Optional");
-            isShowRenderMode = false;
+            isShowRenderMode = !material.shader.name.Contains("Optional");
 
             // If not, set isShowRenderMode to false
             //isShowRenderMode = false;
@@ -274,35 +273,17 @@ namespace lilToon
         protected override void ReplaceToCustomShaders()
         {
             lts         = Shader.Find(shaderName + "/lilToon");
-        /*    ltsc        = Shader.Find("Hidden/" + shaderName + "/Cutout");
+            // Keep only these render modes: Opaque, Cutout, Transparent
+            // Map to this extension's variants so switching stays within the custom shader
+            ltsc        = Shader.Find("Hidden/" + shaderName + "/Cutout");
             ltst        = Shader.Find("Hidden/" + shaderName + "/Transparent");
-            ltsot       = Shader.Find("Hidden/" + shaderName + "/OnePassTransparent");
-            ltstt       = Shader.Find("Hidden/" + shaderName + "/TwoPassTransparent");
 
+            // Outline variants for the above three modes
             ltso        = Shader.Find("Hidden/" + shaderName + "/OpaqueOutline");
             ltsco       = Shader.Find("Hidden/" + shaderName + "/CutoutOutline");
             ltsto       = Shader.Find("Hidden/" + shaderName + "/TransparentOutline");
-            ltsoto      = Shader.Find("Hidden/" + shaderName + "/OnePassTransparentOutline");
-            ltstto      = Shader.Find("Hidden/" + shaderName + "/TwoPassTransparentOutline");
 
-            ltsoo       = Shader.Find(shaderName + "/[Optional] OutlineOnly/Opaque");
-            ltscoo      = Shader.Find(shaderName + "/[Optional] OutlineOnly/Cutout");
-            ltstoo      = Shader.Find(shaderName + "/[Optional] OutlineOnly/Transparent");
-
-            ltsl        = Shader.Find(shaderName + "/lilToonLite");
-            ltslc       = Shader.Find("Hidden/" + shaderName + "/Lite/Cutout");
-            ltslt       = Shader.Find("Hidden/" + shaderName + "/Lite/Transparent");
-            ltslot      = Shader.Find("Hidden/" + shaderName + "/Lite/OnePassTransparent");
-            ltsltt      = Shader.Find("Hidden/" + shaderName + "/Lite/TwoPassTransparent");
-
-            ltslo       = Shader.Find("Hidden/" + shaderName + "/Lite/OpaqueOutline");
-            ltslco      = Shader.Find("Hidden/" + shaderName + "/Lite/CutoutOutline");
-            ltslto      = Shader.Find("Hidden/" + shaderName + "/Lite/TransparentOutline");
-            ltsloto     = Shader.Find("Hidden/" + shaderName + "/Lite/OnePassTransparentOutline");
-            ltsltto     = Shader.Find("Hidden/" + shaderName + "/Lite/TwoPassTransparentOutline");
-
-            // Priority A variants (Tessellation, Refraction, Fur, Gem, Multi, Overlay/FakeShadow) have been removed.
-        */
+            // Do NOT assign OnePass/TwoPass Transparent or Lite/Multi/Optional variants to hide them from the UI
         }
 
         // You can create a menu like this
