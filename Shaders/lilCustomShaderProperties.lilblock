@@ -1,0 +1,53 @@
+
+        //----------------------------------------------------------------------------------------------------------------------
+                // Specular (Custom)
+        
+                // Enable toggles
+                [lilToggle]     _EnableSpec1                  ("Enable Specular 1", Float) = 1
+                [lilToggle]     _EnableSpec2                  ("Enable Specular 2", Float) = 1
+
+                // Per-layer mask and noise (UV tiling via _ST)
+                                _SpecMask1                    ("Specular Mask 1 (R)", 2D) = "white" {}
+                [lilEnum]       _SpecMask1_Channel            ("Channel|R|G|B|A", Int) = 0
+                                _SpecNoiseTex1                ("Specular Noise 1 (R)", 2D) = "white" {}
+                [lilEnum]       _SpecNoiseTex1_Channel        ("Channel|R|G|B|A", Int) = 0
+
+                                _SpecMask2                    ("Specular Mask 2 (R)", 2D) = "white" {}
+                [lilEnum]       _SpecMask2_Channel            ("Channel|R|G|B|A", Int) = 0
+                                _SpecNoiseTex2                ("Specular Noise 2 (R)", 2D) = "white" {}
+                [lilEnum]       _SpecNoiseTex2_Channel        ("Channel|R|G|B|A", Int) = 0
+
+                // Color: fixed color or texture
+                [HDR]           _SpecColor1                   ("Specular Color 1", Color) = (1,1,1,1)
+                [lilToggle]     _UseSpecColorMap1             ("Use Specular Color Map 1", Float) = 0
+                                _SpecColorMap1                ("Specular Color Map 1 (RGB)", 2D) = "white" {}
+
+                [HDR]           _SpecColor2                   ("Specular Color 2", Color) = (1,1,1,1)
+                [lilToggle]     _UseSpecColorMap2             ("Use Specular Color Map 2", Float) = 0
+                                _SpecColorMap2                ("Specular Color Map 2 (RGB)", 2D) = "white" {}
+
+                // Intensity: scalar or texture (black reduces)
+                                _SpecIntensity1               ("Specular Intensity 1", Range(0,8)) = 1
+                [lilToggle]     _UseSpecIntensityMap1         ("Use Spec Intensity Map 1", Float) = 0
+                                _SpecIntensityMap1            ("Specular Intensity Map 1 (R)", 2D) = "white" {}
+                [lilEnum]       _SpecIntensityMap1_Channel    ("Channel|R|G|B|A", Int) = 0
+
+                                _SpecIntensity2               ("Specular Intensity 2", Range(0,8)) = 1
+                [lilToggle]     _UseSpecIntensityMap2         ("Use Spec Intensity Map 2", Float) = 0
+                                _SpecIntensityMap2            ("Specular Intensity Map 2 (R)", 2D) = "white" {}
+                [lilEnum]       _SpecIntensityMap2_Channel    ("Channel|R|G|B|A", Int) = 0
+
+                // Smoothness: scalar or texture (black = matte)
+                                _SpecSmoothness1              ("Specular Smoothness 1", Range(0,1)) = 0.5
+                [lilToggle]     _UseSpecSmoothnessMap1        ("Use Spec Smoothness Map 1", Float) = 0
+                                _SpecSmoothnessMap1           ("Specular Smoothness Map 1 (R)", 2D) = "white" {}
+                [lilEnum]       _SpecSmoothnessMap1_Channel   ("Channel|R|G|B|A", Int) = 0
+
+                                _SpecSmoothness2              ("Specular Smoothness 2", Range(0,1)) = 0.5
+                [lilToggle]     _UseSpecSmoothnessMap2        ("Use Spec Smoothness Map 2", Float) = 0
+                                _SpecSmoothnessMap2           ("Specular Smoothness Map 2 (R)", 2D) = "white" {}
+                [lilEnum]       _SpecSmoothnessMap2_Channel   ("Channel|R|G|B|A", Int) = 0
+
+                // Normal strength per layer
+                                _SpecNormalStrength1          ("Normal Strength 1", Range(0,3)) = 1
+                                _SpecNormalStrength2          ("Normal Strength 2", Range(0,3)) = 1
