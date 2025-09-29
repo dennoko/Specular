@@ -58,7 +58,8 @@ namespace lilToon
 
             // If you want to change rendering modes in the editor, specify the shader here
             ReplaceToCustomShaders();
-            isShowRenderMode = !material.shader.name.Contains("Optional");
+            //isShowRenderMode = !material.shader.name.Contains("Optional");
+            isShowRenderMode = false;
 
             // If not, set isShowRenderMode to false
             //isShowRenderMode = false;
@@ -273,7 +274,7 @@ namespace lilToon
         protected override void ReplaceToCustomShaders()
         {
             lts         = Shader.Find(shaderName + "/lilToon");
-            ltsc        = Shader.Find("Hidden/" + shaderName + "/Cutout");
+        /*    ltsc        = Shader.Find("Hidden/" + shaderName + "/Cutout");
             ltst        = Shader.Find("Hidden/" + shaderName + "/Transparent");
             ltsot       = Shader.Find("Hidden/" + shaderName + "/OnePassTransparent");
             ltstt       = Shader.Find("Hidden/" + shaderName + "/TwoPassTransparent");
@@ -301,6 +302,7 @@ namespace lilToon
             ltsltto     = Shader.Find("Hidden/" + shaderName + "/Lite/TwoPassTransparentOutline");
 
             // Priority A variants (Tessellation, Refraction, Fur, Gem, Multi, Overlay/FakeShadow) have been removed.
+        */
         }
 
         // You can create a menu like this
