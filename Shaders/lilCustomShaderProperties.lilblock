@@ -27,18 +27,18 @@
                                 _SpecColorMap2                ("Specular Color Map 2 (RGB)", 2D) = "white" {}
 
                 // Intensity: scalar or texture (black reduces)
-                                _SpecIntensity1               ("Specular Intensity 1", Range(0,8)) = 1
+                                _SpecIntensity1               ("Specular Intensity 1", Range(0,5)) = 1
                 [lilToggle]     _UseSpecIntensityMap1         ("Use Spec Intensity Map 1", Float) = 0
                                 _SpecIntensityMap1            ("Specular Intensity Map 1 (R)", 2D) = "white" {}
                 [lilEnum]       _SpecIntensityMap1_Channel    ("Channel|R|G|B|A", Int) = 0
 
-                                _SpecIntensity2               ("Specular Intensity 2", Range(0,8)) = 1
+                                _SpecIntensity2               ("Specular Intensity 2", Range(0,5)) = 1
                 [lilToggle]     _UseSpecIntensityMap2         ("Use Spec Intensity Map 2", Float) = 0
                                 _SpecIntensityMap2            ("Specular Intensity Map 2 (R)", 2D) = "white" {}
                 [lilEnum]       _SpecIntensityMap2_Channel    ("Channel|R|G|B|A", Int) = 0
 
                 // Smoothness: scalar or texture (black = matte)
-                                _SpecSmoothness1              ("Specular Smoothness 1", Range(0,1)) = 0.5
+                                _SpecSmoothness1              ("Specular Smoothness 1", Range(0,1)) = 0.1
                 [lilToggle]     _UseSpecSmoothnessMap1        ("Use Spec Smoothness Map 1", Float) = 0
                                 _SpecSmoothnessMap1           ("Specular Smoothness Map 1 (R)", 2D) = "white" {}
                 [lilEnum]       _SpecSmoothnessMap1_Channel   ("Channel|R|G|B|A", Int) = 0
