@@ -49,8 +49,8 @@ namespace lilToon
 
         private static bool isShowCustomProperties;
         private static bool isShowSpec1;
-        private static bool isShowSpec2;
-        private const string shaderName = "dennoko_extension_specular";
+    private static bool isShowSpec2;
+    private const string shaderName = "dennoko_specularex";
 
         protected override void LoadCustomProperties(MaterialProperty[] props, Material material)
         {
