@@ -41,7 +41,13 @@
 	float4 _SpecSmoothnessMap2_ST; \
 	/* Normal strength per layer */ \
 	float _SpecNormalStrength1; \
-	float _SpecNormalStrength2;
+	float _SpecNormalStrength2; \
+	/* Anisotropic specular (hair) */ \
+	float _EnableAniso; \
+	float4 _AnisoSpecColor; \
+	float _AnisoIntensity; \
+	float _AnisoRoughnessX; \
+	float _AnisoRoughnessY;
 
 // Custom textures (declare texture + sampler to be safe across SRPs)
 #define LIL_CUSTOM_TEXTURES \
@@ -112,61 +118,100 @@ float dnkw_pick_channel(float4 v, int channel)
 }
 #define DNKW_SAMPLE_SCALAR_CH(tex, st, uv, ch) (dnkw_pick_channel(DNKW_SAMPLE(tex, st, uv), ch))
 
-#define BEFORE_DISTANCE_FADE \
-{ \
-	float2 uvMain = fd.uvMain; \
-	/* Per-layer overall control */ \
-	float mask1 = DNKW_SAMPLE_SCALAR_CH(_SpecMask1, _SpecMask1_ST, uvMain, _SpecMask1_Channel); \
-	float noise1 = DNKW_SAMPLE_SCALAR_CH(_SpecNoiseTex1, _SpecNoiseTex1_ST, uvMain, _SpecNoiseTex1_Channel); \
-	float overall1 = saturate(mask1 * noise1); \
-	float mask2 = DNKW_SAMPLE_SCALAR_CH(_SpecMask2, _SpecMask2_ST, uvMain, _SpecMask2_Channel); \
-	float noise2 = DNKW_SAMPLE_SCALAR_CH(_SpecNoiseTex2, _SpecNoiseTex2_ST, uvMain, _SpecNoiseTex2_Channel); \
-	float overall2 = saturate(mask2 * noise2); \
-	if(overall1 > 0.0001 || overall2 > 0.0001) { \
-		float3 Norig = normalize(fd.origN); \
-		float3 Nmap  = normalize(fd.N); \
-		float3 V = normalize(fd.V); \
-		float3 L = normalize(fd.L); \
-		float3 H = normalize(L + V); \
-		float atten = fd.attenuation * fd.shadowmix; \
-		float3 lightCol = fd.lightColor; \
-		float3 specAccum = 0; \
-		/* Layer 1 */ \
-		if(_EnableSpec1 > 0.5 && overall1 > 0.0001) { \
-			float s1 = clamp(_SpecNormalStrength1, 0.0, 3.0); \
-			float3 N1 = normalize(lerp(Norig, Nmap, s1)); \
-			float nl1 = saturate(dot(N1, L)); \
-			float nh1 = saturate(dot(N1, H)); \
-			float3 colTex1 = DNKW_SAMPLE_COLOR(_SpecColorMap1, _SpecColorMap1_ST, uvMain); \
-			float mapI1 = DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap1, _SpecIntensityMap1_ST, uvMain, _SpecIntensityMap1_Channel); \
-			float mapS1 = DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap1, _SpecSmoothnessMap1_ST, uvMain, _SpecSmoothnessMap1_Channel); \
-			float3 baseCol1 = (_UseSpecColorMap1 > 0.5 ? colTex1 : float3(1,1,1)) * _SpecColor1.rgb; \
-			float intensity1 = _SpecIntensity1 * (_UseSpecIntensityMap1 > 0.5 ? mapI1 : 1.0); \
-			float smooth1 = saturate(_SpecSmoothness1 * (_UseSpecSmoothnessMap1 > 0.5 ? mapS1 : 1.0)); \
-			float power1 = lerp(8.0, 1024.0, smooth1); \
-			float specTerm1 = pow(nh1, power1) * nl1; \
-			specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
+
+// Provide a no-op macro for outline-related passes and a full implementation otherwise
+#if defined(LIL_PASS_OUTLINE) || defined(LIL_OUTLINE) || defined(PASS_OUTLINE)
+	#define BEFORE_DISTANCE_FADE { /* outline: skip custom specular */ }
+#else
+	#define BEFORE_DISTANCE_FADE \
+	{ \
+		/* Per-layer overall control */ \
+		float mask1 = DNKW_SAMPLE_SCALAR_CH(_SpecMask1, _SpecMask1_ST, fd.uvMain, _SpecMask1_Channel); \
+		float noise1 = DNKW_SAMPLE_SCALAR_CH(_SpecNoiseTex1, _SpecNoiseTex1_ST, fd.uvMain, _SpecNoiseTex1_Channel); \
+		float overall1 = saturate(mask1 * noise1); \
+		float mask2 = DNKW_SAMPLE_SCALAR_CH(_SpecMask2, _SpecMask2_ST, fd.uvMain, _SpecMask2_Channel); \
+		float noise2 = DNKW_SAMPLE_SCALAR_CH(_SpecNoiseTex2, _SpecNoiseTex2_ST, fd.uvMain, _SpecNoiseTex2_Channel); \
+		float overall2 = saturate(mask2 * noise2); \
+		if(overall1 > 0.0001 || overall2 > 0.0001 || _EnableAniso > 0.5) { \
+			float3 Norig = normalize(fd.origN); \
+			float3 Nmap  = normalize(fd.N); \
+			float3 V = normalize(fd.V); \
+			float3 L = normalize(fd.L); \
+			float3 H = normalize(L + V); \
+			float atten = fd.attenuation * fd.shadowmix; \
+			float3 lightCol = fd.lightColor; \
+			float3 specAccum = 0; \
+			/* Layer 1 */ \
+			if(_EnableSpec1 > 0.5 && overall1 > 0.0001) { \
+				float s1 = clamp(_SpecNormalStrength1, 0.0, 3.0); \
+				float3 N1 = normalize(lerp(Norig, Nmap, s1)); \
+				float nl1 = saturate(dot(N1, L)); \
+				float nh1 = saturate(dot(N1, H)); \
+				float3 colTex1 = DNKW_SAMPLE_COLOR(_SpecColorMap1, _SpecColorMap1_ST, fd.uvMain); \
+				float mapI1 = DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap1, _SpecIntensityMap1_ST, fd.uvMain, _SpecIntensityMap1_Channel); \
+				float mapS1 = DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap1, _SpecSmoothnessMap1_ST, fd.uvMain, _SpecSmoothnessMap1_Channel); \
+				float3 baseCol1 = (_UseSpecColorMap1 > 0.5 ? colTex1 : float3(1,1,1)) * _SpecColor1.rgb; \
+				float intensity1 = _SpecIntensity1 * (_UseSpecIntensityMap1 > 0.5 ? mapI1 : 1.0); \
+				float smooth1 = saturate(_SpecSmoothness1 * (_UseSpecSmoothnessMap1 > 0.5 ? mapS1 : 1.0)); \
+				float power1 = lerp(8.0, 1024.0, smooth1); \
+				float specTerm1 = pow(nh1, power1) * nl1; \
+				specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
+			} \
+			/* Layer 2 */ \
+			if(_EnableSpec2 > 0.5 && overall2 > 0.0001) { \
+				float s2 = clamp(_SpecNormalStrength2, 0.0, 3.0); \
+				float3 N2 = normalize(lerp(Norig, Nmap, s2)); \
+				float nl2 = saturate(dot(N2, L)); \
+				float nh2 = saturate(dot(N2, H)); \
+				float3 colTex2 = DNKW_SAMPLE_COLOR(_SpecColorMap2, _SpecColorMap2_ST, fd.uvMain); \
+				float mapI2 = DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap2, _SpecIntensityMap2_ST, fd.uvMain, _SpecIntensityMap2_Channel); \
+				float mapS2 = DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap2, _SpecSmoothnessMap2_ST, fd.uvMain, _SpecSmoothnessMap2_Channel); \
+				float3 baseCol2 = (_UseSpecColorMap2 > 0.5 ? colTex2 : float3(1,1,1)) * _SpecColor2.rgb; \
+				float intensity2 = _SpecIntensity2 * (_UseSpecIntensityMap2 > 0.5 ? mapI2 : 1.0); \
+				float smooth2 = saturate(_SpecSmoothness2 * (_UseSpecSmoothnessMap2 > 0.5 ? mapS2 : 1.0)); \
+				float power2 = lerp(8.0, 1024.0, smooth2); \
+				float specTerm2 = pow(nh2, power2) * nl2; \
+				specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
+			} \
+			/* Anisotropic GGX (Cook-Torrance) for hair */ \
+			if(_EnableAniso > 0.5) { \
+				float3 T = normalize(fd.T); \
+				float3 B = normalize(fd.B); \
+				float3 N = normalize(fd.N); \
+				// Local (T,B,N) space components \
+				float3 Vl = float3(dot(V,T), dot(V,B), saturate(dot(V,N))); \
+				float3 Ll = float3(dot(L,T), dot(L,B), saturate(dot(L,N))); \
+				float3 Hl = normalize(Vl + Ll); \
+				float rx = clamp(_AnisoRoughnessX, 0.02, 1.0); \
+				float ry = clamp(_AnisoRoughnessY, 0.02, 1.0); \
+				// GGX anisotropic NDF \
+				float hx = Hl.x / rx; \
+				float hy = Hl.y / ry; \
+				float hz = max(Hl.z, 1e-4); \
+				float denom = (hx*hx + hy*hy + hz*hz); \
+				float D = 1.0 / (UNITY_PI * rx * ry * denom * denom); \
+				// Smith masking-shadowing (approx isotropic using geometric mean) \
+				float riso = saturate(sqrt(rx * ry)); \
+				float a2 = riso * riso; \
+				float NdotV = saturate(Vl.z); \
+				float NdotL = saturate(Ll.z); \
+				float Gv = NdotV / (NdotV * (1.0 - a2) + a2); \
+				float Gl = NdotL / (NdotL * (1.0 - a2) + a2); \
+				float G = Gv * Gl; \
+				// Fresnel (Schlick) with scalar F0 \
+				float VdotH = saturate(dot(normalize(V), normalize(H))); \
+				float F0s = 0.04; \
+				float F = F0s + (1.0 - F0s) * pow(1.0 - VdotH, 5.0); \
+				float denomCG = max(4.0 * NdotV * NdotL, 1e-4); \
+				float3 ct = (D * G * F / denomCG) * _AnisoIntensity; \
+				float on = step(0.0, NdotV) * step(0.0, NdotL); \
+				specAccum += on * ct * _AnisoSpecColor.rgb; \
+			} \
+			float3 specFinal = specAccum * lightCol * atten; \
+			fd.col.rgb += specFinal; \
 		} \
-		/* Layer 2 */ \
-		if(_EnableSpec2 > 0.5 && overall2 > 0.0001) { \
-			float s2 = clamp(_SpecNormalStrength2, 0.0, 3.0); \
-			float3 N2 = normalize(lerp(Norig, Nmap, s2)); \
-			float nl2 = saturate(dot(N2, L)); \
-			float nh2 = saturate(dot(N2, H)); \
-			float3 colTex2 = DNKW_SAMPLE_COLOR(_SpecColorMap2, _SpecColorMap2_ST, uvMain); \
-			float mapI2 = DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap2, _SpecIntensityMap2_ST, uvMain, _SpecIntensityMap2_Channel); \
-			float mapS2 = DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap2, _SpecSmoothnessMap2_ST, uvMain, _SpecSmoothnessMap2_Channel); \
-			float3 baseCol2 = (_UseSpecColorMap2 > 0.5 ? colTex2 : float3(1,1,1)) * _SpecColor2.rgb; \
-			float intensity2 = _SpecIntensity2 * (_UseSpecIntensityMap2 > 0.5 ? mapI2 : 1.0); \
-			float smooth2 = saturate(_SpecSmoothness2 * (_UseSpecSmoothnessMap2 > 0.5 ? mapS2 : 1.0)); \
-			float power2 = lerp(8.0, 1024.0, smooth2); \
-			float specTerm2 = pow(nh2, power2) * nl2; \
-			specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
-		} \
-		float3 specFinal = specAccum * lightCol * atten; \
-		fd.col.rgb += specFinal; \
-	} \
-}
+	}
+#endif
 
 //----------------------------------------------------------------------------------------------------------------------
 // Information about variables

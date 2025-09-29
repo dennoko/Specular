@@ -25,11 +25,11 @@ namespace lilToon
         private MaterialProperty _SpecIntensity1;
         private MaterialProperty _UseSpecIntensityMap1;
         private MaterialProperty _SpecIntensityMap1;
-    private MaterialProperty _SpecIntensityMap1_Channel;
+        private MaterialProperty _SpecIntensityMap1_Channel;
         private MaterialProperty _SpecSmoothness1;
         private MaterialProperty _UseSpecSmoothnessMap1;
         private MaterialProperty _SpecSmoothnessMap1;
-    private MaterialProperty _SpecSmoothnessMap1_Channel;
+        private MaterialProperty _SpecSmoothnessMap1_Channel;
         private MaterialProperty _SpecNormalStrength1;
 
         // 2nd layer
@@ -40,17 +40,25 @@ namespace lilToon
         private MaterialProperty _SpecIntensity2;
         private MaterialProperty _UseSpecIntensityMap2;
         private MaterialProperty _SpecIntensityMap2;
-    private MaterialProperty _SpecIntensityMap2_Channel;
+        private MaterialProperty _SpecIntensityMap2_Channel;
         private MaterialProperty _SpecSmoothness2;
         private MaterialProperty _UseSpecSmoothnessMap2;
         private MaterialProperty _SpecSmoothnessMap2;
-    private MaterialProperty _SpecSmoothnessMap2_Channel;
+        private MaterialProperty _SpecSmoothnessMap2_Channel;
         private MaterialProperty _SpecNormalStrength2;
+
+        // Anisotropic (Hair)
+        private MaterialProperty _EnableAniso;
+        private MaterialProperty _AnisoSpecColor;
+        private MaterialProperty _AnisoIntensity;
+        private MaterialProperty _AnisoRoughnessX;
+        private MaterialProperty _AnisoRoughnessY;
 
         private static bool isShowCustomProperties;
         private static bool isShowSpec1;
-    private static bool isShowSpec2;
-    private const string shaderName = "dennoko_specularex";
+        private static bool isShowSpec2;
+        private static bool isShowAniso;
+        private const string shaderName = "dennoko_specularex";
 
         protected override void LoadCustomProperties(MaterialProperty[] props, Material material)
         {
@@ -104,6 +112,13 @@ namespace lilToon
             _SpecSmoothnessMap2     = FindProperty("_SpecSmoothnessMap2", props);
             _SpecSmoothnessMap2_Channel = FindProperty("_SpecSmoothnessMap2_Channel", props);
             _SpecNormalStrength2    = FindProperty("_SpecNormalStrength2", props);
+
+            // Anisotropic (Hair)
+            _EnableAniso            = FindProperty("_EnableAniso", props);
+            _AnisoSpecColor         = FindProperty("_AnisoSpecColor", props);
+            _AnisoIntensity         = FindProperty("_AnisoIntensity", props);
+            _AnisoRoughnessX        = FindProperty("_AnisoRoughnessX", props);
+            _AnisoRoughnessY        = FindProperty("_AnisoRoughnessY", props);
         }
 
         protected override void DrawCustomProperties(Material material)
@@ -253,6 +268,37 @@ namespace lilToon
 
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.EndVertical();
+                }
+
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.EndVertical();
+            }
+
+            // Anisotropic (Hair)
+            isShowAniso = Foldout("Anisotropic", "Anisotropic Specular (Hair)", isShowAniso);
+            if(isShowAniso)
+            {
+                EditorGUILayout.BeginVertical(boxOuter);
+                EditorGUILayout.LabelField("Anisotropic (Hair)", customToggleFont);
+                EditorGUILayout.BeginVertical(boxInner);
+
+                m_MaterialEditor.ShaderProperty(_EnableAniso, new GUIContent("有効化", "異方性スペキュラー（髪向け）を有効にします。"));
+
+                using(new EditorGUI.DisabledScope(_EnableAniso.floatValue < 0.5f))
+                {
+                    // Color
+                    EditorGUI.showMixedValue = _AnisoSpecColor.hasMixedValue;
+                    var acol = _AnisoSpecColor.colorValue;
+                    var newAcol = EditorGUILayout.ColorField(new GUIContent("色", "異方性ハイライトの色 (HDR)。"), acol, true, true, true);
+                    if(newAcol != acol) _AnisoSpecColor.colorValue = newAcol;
+                    EditorGUI.showMixedValue = false;
+
+                    // Intensity
+                    m_MaterialEditor.ShaderProperty(_AnisoIntensity, new GUIContent("強度", "異方性ハイライトの明るさ/寄与度。"));
+
+                    // Roughness X/Y
+                    m_MaterialEditor.ShaderProperty(_AnisoRoughnessX, new GUIContent("Roughness X", "タンジェント方向のラフネス。小さいほど鋭くなります (0.02 - 1)。"));
+                    m_MaterialEditor.ShaderProperty(_AnisoRoughnessY, new GUIContent("Roughness Y", "バイタンジェント方向のラフネス。小さいほど鋭くなります (0.02 - 1)。"));
                 }
 
                 EditorGUILayout.EndVertical();

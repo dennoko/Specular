@@ -1,0 +1,1 @@
+Reminder: Delete the old Editor/dennoko_extension_specular.asmdef and its .meta from version control if Unity still sees duplicate assembly definitions. Some VCC-managed files may be read-only; remove them manually in Unity if needed.

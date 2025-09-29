@@ -315,6 +315,9 @@ Material:
     - _AlphaMaskScale: 1
     - _AlphaMaskValue: 0
     - _AlphaToMask: 0
+    - _AnisoIntensity: 1
+    - _AnisoRoughnessX: 0.2
+    - _AnisoRoughnessY: 0.8
     - _Anisotropy2MatCap: 0
     - _Anisotropy2MatCap2nd: 0
     - _Anisotropy2Reflection: 0
@@ -391,6 +394,7 @@ Material:
     - _EmissionMap_UVMode: 0
     - _EmissionParallaxDepth: 0
     - _EmissionUseGrad: 0
+    - _EnableAniso: 0
     - _EnableSpec1: 1
     - _EnableSpec2: 1
     - _EnvRimBlur: 0.35
@@ -603,7 +607,7 @@ Material:
     - _ShiftBackfaceUV: 0
     - _Smoothness: 1
     - _SmoothnessTextureChannel: 0
-    - _SpecIntensity1: 0.33
+    - _SpecIntensity1: 0
     - _SpecIntensity2: 1
     - _SpecIntensityMap1_Channel: 0
     - _SpecIntensityMap2_Channel: 0
@@ -611,10 +615,10 @@ Material:
     - _SpecMask2_Channel: 0
     - _SpecNoiseTex1_Channel: 0
     - _SpecNoiseTex2_Channel: 0
-    - _SpecNormalStrength1: 1.51
-    - _SpecNormalStrength2: 2.58
+    - _SpecNormalStrength1: 1
+    - _SpecNormalStrength2: 1
     - _SpecSmoothness1: 0
-    - _SpecSmoothness2: 0.685
+    - _SpecSmoothness2: 0.097
     - _SpecSmoothnessMap1_Channel: 0
     - _SpecSmoothnessMap2_Channel: 0
     - _SpecularBlur: 0
@@ -698,6 +702,7 @@ Material:
     - _lilShadowCasterBias: 0
     - _lilToonVersion: 45
     m_Colors:
+    - _AnisoSpecColor: {r: 1, g: 1, b: 1, a: 1}
     - _AudioLinkDefaultValue: {r: 0, g: 0, b: 2, a: 0.75}
     - _AudioLinkLocalMapParams: {r: 120, g: 1, b: 0, a: 0}
     - _AudioLinkMask_ScrollRotate: {r: 0, g: 0, b: 0, a: 0}
@@ -769,8 +774,8 @@ Material:
     - _ShadowAOShift2: {r: 1, g: 0, b: 1, a: 0}
     - _ShadowBorderColor: {r: 0.18867922, g: 0.18867922, b: 0.18867922, a: 1}
     - _ShadowColor: {r: 0.8113208, g: 0.8113208, b: 0.8113208, a: 1}
-    - _SpecColor1: {r: 0.1509434, g: 0.1509434, b: 0.1509434, a: 1}
-    - _SpecColor2: {r: 0.21698111, g: 0.21698111, b: 0.21698111, a: 1}
+    - _SpecColor1: {r: 0.4716981, g: 0.4716981, b: 0.4716981, a: 1}
+    - _SpecColor2: {r: 0.8962264, g: 0.8962264, b: 0.8962264, a: 1}
     - _e2ga0: {r: 1, g: 0, b: 0, a: 0}
     - _e2ga1: {r: 1, g: 0, b: 0, a: 1}
     - _e2ga2: {r: 1, g: 0, b: 0, a: 0}

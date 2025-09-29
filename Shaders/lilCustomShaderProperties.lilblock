@@ -51,3 +51,10 @@
                 // Normal strength per layer
                                 _SpecNormalStrength1          ("Normal Strength 1", Range(0,3)) = 1
                                 _SpecNormalStrength2          ("Normal Strength 2", Range(0,3)) = 1
+
+                // Anisotropic Specular (Hair)
+                [lilToggle]     _EnableAniso                  ("Enable Anisotropic Specular", Float) = 0
+                [HDR]           _AnisoSpecColor               ("Aniso Specular Color", Color) = (1,1,1,1)
+                                _AnisoIntensity               ("Aniso Intensity", Range(0,5)) = 1
+                                _AnisoRoughnessX              ("Aniso Roughness X", Range(0.02,1)) = 0.2
+                                _AnisoRoughnessY              ("Aniso Roughness Y", Range(0.02,1)) = 0.8
