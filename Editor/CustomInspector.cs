@@ -288,18 +288,6 @@ namespace lilToon
             ltscoo      = Shader.Find(shaderName + "/[Optional] OutlineOnly/Cutout");
             ltstoo      = Shader.Find(shaderName + "/[Optional] OutlineOnly/Transparent");
 
-            ltstess     = Shader.Find("Hidden/" + shaderName + "/Tessellation/Opaque");
-            ltstessc    = Shader.Find("Hidden/" + shaderName + "/Tessellation/Cutout");
-            ltstesst    = Shader.Find("Hidden/" + shaderName + "/Tessellation/Transparent");
-            ltstessot   = Shader.Find("Hidden/" + shaderName + "/Tessellation/OnePassTransparent");
-            ltstesstt   = Shader.Find("Hidden/" + shaderName + "/Tessellation/TwoPassTransparent");
-
-            ltstesso    = Shader.Find("Hidden/" + shaderName + "/Tessellation/OpaqueOutline");
-            ltstessco   = Shader.Find("Hidden/" + shaderName + "/Tessellation/CutoutOutline");
-            ltstessto   = Shader.Find("Hidden/" + shaderName + "/Tessellation/TransparentOutline");
-            ltstessoto  = Shader.Find("Hidden/" + shaderName + "/Tessellation/OnePassTransparentOutline");
-            ltstesstto  = Shader.Find("Hidden/" + shaderName + "/Tessellation/TwoPassTransparentOutline");
-
             ltsl        = Shader.Find(shaderName + "/lilToonLite");
             ltslc       = Shader.Find("Hidden/" + shaderName + "/Lite/Cutout");
             ltslt       = Shader.Find("Hidden/" + shaderName + "/Lite/Transparent");
@@ -312,27 +300,7 @@ namespace lilToon
             ltsloto     = Shader.Find("Hidden/" + shaderName + "/Lite/OnePassTransparentOutline");
             ltsltto     = Shader.Find("Hidden/" + shaderName + "/Lite/TwoPassTransparentOutline");
 
-            ltsref      = Shader.Find("Hidden/" + shaderName + "/Refraction");
-            ltsrefb     = Shader.Find("Hidden/" + shaderName + "/RefractionBlur");
-            ltsfur      = Shader.Find("Hidden/" + shaderName + "/Fur");
-            ltsfurc     = Shader.Find("Hidden/" + shaderName + "/FurCutout");
-            ltsfurtwo   = Shader.Find("Hidden/" + shaderName + "/FurTwoPass");
-            ltsfuro     = Shader.Find(shaderName + "/[Optional] FurOnly/Transparent");
-            ltsfuroc    = Shader.Find(shaderName + "/[Optional] FurOnly/Cutout");
-            ltsfurotwo  = Shader.Find(shaderName + "/[Optional] FurOnly/TwoPass");
-            ltsgem      = Shader.Find("Hidden/" + shaderName + "/Gem");
-            ltsfs       = Shader.Find(shaderName + "/[Optional] FakeShadow");
-
-            ltsover     = Shader.Find(shaderName + "/[Optional] Overlay");
-            ltsoover    = Shader.Find(shaderName + "/[Optional] OverlayOnePass");
-            ltslover    = Shader.Find(shaderName + "/[Optional] LiteOverlay");
-            ltsloover   = Shader.Find(shaderName + "/[Optional] LiteOverlayOnePass");
-
-            ltsm        = Shader.Find(shaderName + "/lilToonMulti");
-            ltsmo       = Shader.Find("Hidden/" + shaderName + "/MultiOutline");
-            ltsmref     = Shader.Find("Hidden/" + shaderName + "/MultiRefraction");
-            ltsmfur     = Shader.Find("Hidden/" + shaderName + "/MultiFur");
-            ltsmgem     = Shader.Find("Hidden/" + shaderName + "/MultiGem");
+            // Priority A variants (Tessellation, Refraction, Fur, Gem, Multi, Overlay/FakeShadow) have been removed.
         }
 
         // You can create a menu like this
