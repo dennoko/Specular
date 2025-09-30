@@ -25,11 +25,11 @@ namespace lilToon
         private MaterialProperty _SpecIntensity1;
         private MaterialProperty _UseSpecIntensityMap1;
         private MaterialProperty _SpecIntensityMap1;
-    private MaterialProperty _SpecIntensityMap1_Channel;
+        private MaterialProperty _SpecIntensityMap1_Channel;
         private MaterialProperty _SpecSmoothness1;
         private MaterialProperty _UseSpecSmoothnessMap1;
         private MaterialProperty _SpecSmoothnessMap1;
-    private MaterialProperty _SpecSmoothnessMap1_Channel;
+        private MaterialProperty _SpecSmoothnessMap1_Channel;
         private MaterialProperty _SpecNormalStrength1;
 
         // 2nd layer
@@ -40,17 +40,17 @@ namespace lilToon
         private MaterialProperty _SpecIntensity2;
         private MaterialProperty _UseSpecIntensityMap2;
         private MaterialProperty _SpecIntensityMap2;
-    private MaterialProperty _SpecIntensityMap2_Channel;
+        private MaterialProperty _SpecIntensityMap2_Channel;
         private MaterialProperty _SpecSmoothness2;
         private MaterialProperty _UseSpecSmoothnessMap2;
         private MaterialProperty _SpecSmoothnessMap2;
-    private MaterialProperty _SpecSmoothnessMap2_Channel;
+        private MaterialProperty _SpecSmoothnessMap2_Channel;
         private MaterialProperty _SpecNormalStrength2;
 
         private static bool isShowCustomProperties;
         private static bool isShowSpec1;
-    private static bool isShowSpec2;
-    private const string shaderName = "dennoko_specularex";
+        private static bool isShowSpec2;
+        private const string shaderName = "dennoko_specularex";
 
         protected override void LoadCustomProperties(MaterialProperty[] props, Material material)
         {
