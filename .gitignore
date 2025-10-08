@@ -1,0 +1,7 @@
+# Ignore Material and Texture folders
+Mat/
+Tex/
+
+# Keep the .meta files for these folders so Unity doesn't lose references
+!Mat.meta
+!Tex.meta
