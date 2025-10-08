@@ -150,12 +150,8 @@ namespace lilToon
                         m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Color Map (RGB)", "スペキュラーカラーマップ(RGB)。"), _SpecColorMap1);
                         m_MaterialEditor.TextureScaleOffsetProperty(_SpecColorMap1);
                     }
-                    // Color with tooltip
-                    EditorGUI.showMixedValue = _SpecColor1.hasMixedValue;
-                    var col1 = _SpecColor1.colorValue;
-                    var newCol1 = EditorGUILayout.ColorField(new GUIContent("色", "スペキュラーのベースカラー。カラーマップ未使用時に適用されます。"), col1, true, true, true);
-                    if(newCol1 != col1) _SpecColor1.colorValue = newCol1;
-                    EditorGUI.showMixedValue = false;
+                    // Color with tooltip + Hex input
+                    DrawColorWithHex(_SpecColor1, "色", "スペキュラーのベースカラー。カラーマップ未使用時に適用されます。");
 
                     // Intensity
                     m_MaterialEditor.ShaderProperty(_UseSpecIntensityMap1, new GUIContent("強度マップ使用", "スペキュラー強度にテクスチャのチャンネルを使用します。OFFのときは下のスライダー値を使用します。"));
@@ -215,12 +211,8 @@ namespace lilToon
                         m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Color Map (RGB)", "スペキュラーカラーマップ(RGB)。"), _SpecColorMap2);
                         m_MaterialEditor.TextureScaleOffsetProperty(_SpecColorMap2);
                     }
-                    // Color with tooltip
-                    EditorGUI.showMixedValue = _SpecColor2.hasMixedValue;
-                    var col2 = _SpecColor2.colorValue;
-                    var newCol2 = EditorGUILayout.ColorField(new GUIContent("色", "スペキュラーのベースカラー。カラーマップ未使用時に適用されます。"), col2, true, true, true);
-                    if(newCol2 != col2) _SpecColor2.colorValue = newCol2;
-                    EditorGUI.showMixedValue = false;
+                    // Color with tooltip + Hex input
+                    DrawColorWithHex(_SpecColor2, "色", "スペキュラーのベースカラー。カラーマップ未使用時に適用されます。");
 
                     // Intensity
                     m_MaterialEditor.ShaderProperty(_UseSpecIntensityMap2, new GUIContent("強度マップ使用", "スペキュラー強度にテクスチャのチャンネルを使用します。OFFのときは下のスライダー値を使用します。"));
@@ -258,6 +250,93 @@ namespace lilToon
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.EndVertical();
             }
+        }
+
+        // Draw Color field with adjacent hex input (#RRGGBB or #RRGGBBAA)
+        private void DrawColorWithHex(MaterialProperty prop, string label, string tooltip)
+        {
+            var content = new GUIContent(label, tooltip);
+            Rect r = EditorGUILayout.GetControlRect();
+            r = EditorGUI.IndentedRect(r);
+
+            float labelWidth = EditorGUIUtility.labelWidth;
+            float hexWidth = 110f; // enough for #RRGGBBAA
+            float spacing = 4f;
+
+            Rect labelRect = new Rect(r.x, r.y, labelWidth, r.height);
+            Rect colorRect = new Rect(labelRect.xMax, r.y, Mathf.Max(0, r.width - labelWidth - spacing - hexWidth), r.height);
+            Rect hexRect = new Rect(colorRect.xMax + spacing, r.y, hexWidth, r.height);
+
+            EditorGUI.LabelField(labelRect, content);
+
+            EditorGUI.showMixedValue = prop.hasMixedValue;
+            Color col = prop.colorValue;
+
+            EditorGUI.BeginChangeCheck();
+            // Unity color field with alpha + HDR toggle preserved
+            col = EditorGUI.ColorField(colorRect, GUIContent.none, col, true, true, true);
+            bool colorChanged = EditorGUI.EndChangeCheck();
+
+            string ToHex(Color c)
+            {
+                // Convert to 0-255 and format as 2-digit hex. Use straight color (no gamma conversion assumed here)
+                byte r8 = (byte)Mathf.RoundToInt(Mathf.Clamp01(c.r) * 255f);
+                byte g8 = (byte)Mathf.RoundToInt(Mathf.Clamp01(c.g) * 255f);
+                byte b8 = (byte)Mathf.RoundToInt(Mathf.Clamp01(c.b) * 255f);
+                byte a8 = (byte)Mathf.RoundToInt(Mathf.Clamp01(c.a) * 255f);
+                // Show alpha only if not fully opaque by default; but to keep stable, show always with alpha
+                return $"#{r8:X2}{g8:X2}{b8:X2}{a8:X2}";
+            }
+
+            bool ParseHex(string s, out Color c)
+            {
+                c = col;
+                if(string.IsNullOrEmpty(s)) return false;
+                s = s.Trim();
+                if(s.StartsWith("#")) s = s.Substring(1);
+                // Accept 6 (RGB) or 8 (RGBA) hex. Also accept 3/4 shorthand (#RGB/#RGBA)
+                if(s.Length == 3 || s.Length == 4)
+                {
+                    // expand shorthand, e.g., F0A -> FF00AA
+                    string r1 = s[0].ToString();
+                    string g1 = s[1].ToString();
+                    string b1 = s[2].ToString();
+                    string a1 = (s.Length == 4) ? s[3].ToString() : "F"; // default alpha to F
+                    s = r1 + r1 + g1 + g1 + b1 + b1 + a1 + a1;
+                }
+                else if(s.Length == 6)
+                {
+                    s += "FF"; // default alpha to 255
+                }
+                if(s.Length != 8) return false;
+
+                if(byte.TryParse(s.Substring(0,2), System.Globalization.NumberStyles.HexNumber, null, out byte r8) &&
+                   byte.TryParse(s.Substring(2,2), System.Globalization.NumberStyles.HexNumber, null, out byte g8) &&
+                   byte.TryParse(s.Substring(4,2), System.Globalization.NumberStyles.HexNumber, null, out byte b8) &&
+                   byte.TryParse(s.Substring(6,2), System.Globalization.NumberStyles.HexNumber, null, out byte a8))
+                {
+                    c = new Color(r8/255f, g8/255f, b8/255f, a8/255f);
+                    return true;
+                }
+                return false;
+            }
+
+            // Hex input field
+            string hexCurrent = ToHex(col);
+            string hexNew = EditorGUI.TextField(hexRect, hexCurrent);
+
+            if(colorChanged)
+            {
+                m_MaterialEditor.RegisterPropertyChangeUndo(label);
+                prop.colorValue = col;
+            }
+            else if(hexNew != hexCurrent && ParseHex(hexNew, out var parsed))
+            {
+                m_MaterialEditor.RegisterPropertyChangeUndo(label + " Hex");
+                prop.colorValue = parsed;
+            }
+
+            EditorGUI.showMixedValue = false;
         }
 
         private static readonly string[] kChannels = {"R", "G", "B", "A"};

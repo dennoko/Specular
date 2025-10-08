@@ -4,7 +4,7 @@
         
                 // Enable toggles
                 [lilToggle]     _EnableSpec1                  ("Enable Specular 1", Float) = 1
-                [lilToggle]     _EnableSpec2                  ("Enable Specular 2", Float) = 1
+                [lilToggle]     _EnableSpec2                  ("Enable Specular 2", Float) = 0
 
                 // Per-layer mask and noise (UV tiling via _ST)
                                 _SpecMask1                    ("Specular Mask 1 (R)", 2D) = "white" {}
