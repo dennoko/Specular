@@ -51,6 +51,23 @@ namespace lilToon
         private static bool isShowSpec1;
         private static bool isShowSpec2;
         private const string shaderName = "dennoko_specularex";
+        
+        // Custom MatCaps
+        private        bool isShowMatCap1 = false;
+        
+        private MaterialProperty _CustomMatCap1_Enable;
+        private MaterialProperty _CustomMatCap1_Color;
+        private MaterialProperty _CustomMatCap1_Tex;
+        private MaterialProperty _CustomMatCap1_Blend;
+        private MaterialProperty _CustomMatCap1_Mask;
+        private MaterialProperty _CustomMatCap1_BumpScale;
+        private MaterialProperty _CustomMatCap1_UseReflection;
+        private MaterialProperty _CustomMatCap1_DisableBackface;
+        private MaterialProperty _CustomMatCap1_EnableLighting;
+        private MaterialProperty _CustomMatCap1_ShadowStrength;
+        private MaterialProperty _CustomMatCap1_Blur;
+        private MaterialProperty _CustomMatCap1_Alpha;
+
 
         protected override void LoadCustomProperties(MaterialProperty[] props, Material material)
         {
@@ -104,6 +121,24 @@ namespace lilToon
             _SpecSmoothnessMap2     = FindProperty("_SpecSmoothnessMap2", props);
             _SpecSmoothnessMap2_Channel = FindProperty("_SpecSmoothnessMap2_Channel", props);
             _SpecNormalStrength2    = FindProperty("_SpecNormalStrength2", props);
+            
+            // Custom MatCap 1
+            _CustomMatCap1_Enable           = FindProperty("_CustomMatCap1_Enable", props);
+            _CustomMatCap1_Color            = FindProperty("_CustomMatCap1_Color", props);
+            _CustomMatCap1_Tex              = FindProperty("_CustomMatCap1_Tex", props);
+            _CustomMatCap1_Blend            = FindProperty("_CustomMatCap1_Blend", props);
+            _CustomMatCap1_Mask             = FindProperty("_CustomMatCap1_Mask", props);
+            _CustomMatCap1_BumpScale        = FindProperty("_CustomMatCap1_BumpScale", props);
+            _CustomMatCap1_UseReflection    = FindProperty("_CustomMatCap1_UseReflection", props);
+            _CustomMatCap1_DisableBackface  = FindProperty("_CustomMatCap1_DisableBackface", props);
+            _CustomMatCap1_EnableLighting   = FindProperty("_CustomMatCap1_EnableLighting", props);
+            _CustomMatCap1_ShadowStrength   = FindProperty("_CustomMatCap1_ShadowStrength", props);
+            _CustomMatCap1_Blur             = FindProperty("_CustomMatCap1_Blur", props);
+            _CustomMatCap1_Alpha            = FindProperty("_CustomMatCap1_Alpha", props);
+            
+
+            
+
         }
 
         protected override void DrawCustomProperties(Material material)
@@ -244,6 +279,64 @@ namespace lilToon
                     m_MaterialEditor.ShaderProperty(_SpecNormalStrength2, new GUIContent("ノーマル強度", "2層目のノーマルマップ強度。0で無効、1でそのまま、2以上で傾きを強くします。値域が破綻しないよう内部で補間します。"));
 
                     EditorGUILayout.EndVertical();
+                    EditorGUILayout.EndVertical();
+                }
+
+                // MatCap 1
+                isShowMatCap1 = Foldout("MatCap", "MatCap parameters", isShowMatCap1);
+                if(isShowMatCap1)
+                {
+                    EditorGUILayout.BeginVertical(boxOuter);
+                    EditorGUILayout.LabelField("MatCap", customToggleFont);
+                    
+                    bool matCap1Valid = _CustomMatCap1_Enable != null && _CustomMatCap1_Tex != null && _CustomMatCap1_Color != null &&
+                                        _CustomMatCap1_Blend != null && _CustomMatCap1_Blur != null && _CustomMatCap1_Mask != null &&
+                                        _CustomMatCap1_BumpScale != null && _CustomMatCap1_UseReflection != null && _CustomMatCap1_DisableBackface != null &&
+                                        _CustomMatCap1_EnableLighting != null && _CustomMatCap1_ShadowStrength != null &&
+                                        _CustomMatCap1_Alpha != null;
+
+                    if (matCap1Valid)
+                    {
+                        EditorGUILayout.BeginVertical(boxInner);
+                        
+                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_Enable, new GUIContent("Enable"));
+                        m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Texture"), _CustomMatCap1_Tex, _CustomMatCap1_Color);
+                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_Alpha, new GUIContent("Strength"));
+                        // Using TexturePropertySingleLine for Color as well (passed as extra property) or just ShaderProperty
+                        // m_MaterialEditor.ColorProperty(_CustomMatCap1_Color, "Color"); // ColorProperty isn't standard in MaterialEditor in this way, assumes prop.
+                        // Let's use ShaderProperty for Color
+                        // m_MaterialEditor.ShaderProperty(_CustomMatCap1_Color, new GUIContent("Color"));
+                        
+                         m_MaterialEditor.TextureScaleOffsetProperty(_CustomMatCap1_Tex);
+                        
+                        // Blend Mode Dropdown
+                        EditorGUI.BeginChangeCheck();
+                        string[] blendModes = { "Add", "Screen", "Multiply" };
+                        int blendMode = (int)_CustomMatCap1_Blend.floatValue;
+                        blendMode = EditorGUILayout.Popup(new GUIContent("Blend Mode"), blendMode, blendModes);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            _CustomMatCap1_Blend.floatValue = blendMode;
+                        }
+
+                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_Blur, new GUIContent("Blur"));
+
+                        m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Mask"), _CustomMatCap1_Mask);
+                         m_MaterialEditor.TextureScaleOffsetProperty(_CustomMatCap1_Mask);
+                        
+                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_BumpScale, new GUIContent("Normal Strength"));
+                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_UseReflection, new GUIContent("Use Reflection", "If enabled, samples the MatCap using the reflection vector (like a Cubemap) instead of the normal vector."));
+                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_DisableBackface, new GUIContent("Disable on Backface", "If enabled, the MatCap will not be applied to backfaces."));
+
+                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_EnableLighting, new GUIContent("Enable Lighting"));
+                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_ShadowStrength, new GUIContent("Shadow Strength"));
+                        
+                        EditorGUILayout.EndVertical();
+                    }
+                    else
+                    {
+                        EditorGUILayout.HelpBox("MatCap 1 properties incomplete.", MessageType.Error);
+                    }
                     EditorGUILayout.EndVertical();
                 }
 

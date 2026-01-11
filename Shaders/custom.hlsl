@@ -39,9 +39,23 @@
 	float4 _SpecIntensityMap2_ST; \
 	float4 _SpecSmoothnessMap1_ST; \
 	float4 _SpecSmoothnessMap2_ST; \
-	/* Normal strength per layer */ \
 	float _SpecNormalStrength1; \
-	float _SpecNormalStrength2;
+	float _SpecNormalStrength2; \
+	/* Custom MatCap 1 */ \
+	float _CustomMatCap1_Enable; \
+	float4 _CustomMatCap1_Color; \
+	int _CustomMatCap1_Blend; \
+	int _CustomMatCap1_Mask_Channel; \
+	float _CustomMatCap1_BumpScale; \
+	int _CustomMatCap1_UseReflection; \
+	int _CustomMatCap1_DisableBackface; \
+	float _CustomMatCap1_EnableLighting; \
+	float _CustomMatCap1_ShadowStrength; \
+	float _CustomMatCap1_Blur; \
+	float _CustomMatCap1_Alpha; \
+	float4 _CustomMatCap1_Tex_ST; \
+	float4 _CustomMatCap1_Mask_ST; \
+	float4 _CustomMatCap1_NormalMap_ST; 
 
 // Custom textures (declare texture + sampler to be safe across SRPs)
 #define LIL_CUSTOM_TEXTURES \
@@ -54,7 +68,10 @@
 	TEXTURE2D(_SpecIntensityMap1); \
 	TEXTURE2D(_SpecIntensityMap2); \
 	TEXTURE2D(_SpecSmoothnessMap1); \
-	TEXTURE2D(_SpecSmoothnessMap2);
+	TEXTURE2D(_SpecSmoothnessMap2); \
+	TEXTURE2D(_CustomMatCap1_Tex); \
+	TEXTURE2D(_CustomMatCap1_Mask); \
+
 
 // (note) _ST variables declared inside LIL_CUSTOM_PROPERTIES above
 
@@ -112,6 +129,32 @@ float dnkw_pick_channel(float4 v, int channel)
 }
 #define DNKW_SAMPLE_SCALAR_CH(tex, st, uv, ch) (dnkw_pick_channel(DNKW_SAMPLE(tex, st, uv), ch))
 
+
+// Helper macro for individual MatCap layer
+#define DNKW_CALC_MATCAP(idx) \
+	if (_CustomMatCap##idx##_Enable > 0.5) { \
+		float3 N_mc = normalize(fd.N); \
+		float bumpScale##idx = _CustomMatCap##idx##_BumpScale; \
+		if (abs(bumpScale##idx) > 0.001) { \
+			float3 normalTan = UnpackNormalScale(DNKW_SAMPLE(_CustomMatCap##idx##_NormalMap, _CustomMatCap##idx##_NormalMap_ST, uvMain), bumpScale##idx); \
+			N_mc = normalize(mul(normalTan, fd.TBN)); \
+		} \
+		float3 N_vs = mul((float3x3)UNITY_MATRIX_V, N_mc); \
+		N_vs.z *= -1.0; /* Correct for Unity view space */ \
+		float2 uv_mc = N_vs.xy * 0.5 + 0.5; \
+		float4 mcTex = LIL_SAMPLE_2D_LOD(_CustomMatCap##idx##_Tex, sampler_linear_clamp, uv_mc, _CustomMatCap##idx##_Blur * 8.0); \
+		float3 mcColor = mcTex.rgb * _CustomMatCap##idx##_Color.rgb; \
+		float mask##idx = DNKW_SAMPLE_SCALAR_CH(_CustomMatCap##idx##_Mask, _CustomMatCap##idx##_Mask_ST, uvMain, _CustomMatCap##idx##_Mask_Channel); \
+		mcColor *= mask##idx; \
+		float shadowFac = lerp(1.0, fd.attenuation * fd.shadowmix, _CustomMatCap##idx##_ShadowStrength); \
+		float3 lightFac = lerp(float3(1,1,1), fd.lightColor, _CustomMatCap##idx##_EnableLighting); \
+		mcColor *= shadowFac * lightFac; \
+		int blend##idx = _CustomMatCap##idx##_Blend; \
+		if (blend##idx == 0) fd.col.rgb += mcColor; \
+		else if (blend##idx == 1) fd.col.rgb = 1.0 - (1.0 - fd.col.rgb) * (1.0 - mcColor); \
+		else if (blend##idx == 2) fd.col.rgb *= mcColor; \
+	}
+
 #define BEFORE_DISTANCE_FADE \
 { \
 	float2 uvMain = fd.uvMain; \
@@ -167,6 +210,47 @@ float dnkw_pick_channel(float4 v, int channel)
 		fd.col.rgb += specFinal; \
 	} \
 }
+
+#if !defined(UNITY_PASS_SHADOWCASTER)
+#define BEFORE_MATCAP \
+{ \
+	float2 uvMain = fd.uvMain; \
+	/* Custom MatCap 1 Hardcoded Implementation */ \
+	if (_CustomMatCap1_Enable > 0.5) { \
+		float3 N_mc = normalize(fd.N); \
+		float bumpScale1 = _CustomMatCap1_BumpScale; \
+        /* Use main normal map strength adjustment */ \
+        float3 N_orig = normalize(fd.origN); \
+        float3 N_main = normalize(fd.N); \
+        N_mc = normalize(lerp(N_orig, N_main, bumpScale1)); \
+ \
+        if (_CustomMatCap1_UseReflection > 0.5) { \
+            N_mc = reflect(-fd.V, N_mc); \
+        } \
+ \
+		float3 N_vs = mul((float3x3)UNITY_MATRIX_V, N_mc); \
+		N_vs.z *= -1.0; /* Correct for Unity view space */ \
+		float2 uv_mc = N_vs.xy * 0.5 + 0.5; \
+		float4 mcTex = LIL_SAMPLE_2D_LOD(_CustomMatCap1_Tex, sampler_linear_clamp, uv_mc, _CustomMatCap1_Blur * 8.0); \
+		float3 mcColor = mcTex.rgb * _CustomMatCap1_Color.rgb; \
+		float mask1 = DNKW_SAMPLE(_CustomMatCap1_Mask, _CustomMatCap1_Mask_ST, uvMain).r; \
+		if (_CustomMatCap1_DisableBackface && fd.facing < 0) mask1 = 0.0; \
+		mask1 *= saturate(_CustomMatCap1_Alpha); /* Apply Opacity */ \
+		/* Improved Blend Logic: Apply Mask via Lerp */ \
+		float3 targetColor = fd.col.rgb; \
+		int blend1 = _CustomMatCap1_Blend; \
+		float shadowFac = lerp(1.0, fd.attenuation * fd.shadowmix, _CustomMatCap1_ShadowStrength); \
+		float3 lightFac = lerp(float3(1,1,1), fd.lightColor, _CustomMatCap1_EnableLighting); \
+		mcColor *= shadowFac * lightFac; \
+		if (blend1 == 0) targetColor += mcColor; /* Add */ \
+		else if (blend1 == 1) targetColor = 1.0 - (1.0 - targetColor) * (1.0 - mcColor); /* Screen */ \
+		else if (blend1 == 2) targetColor *= mcColor; /* Multiply */ \
+		fd.col.rgb = lerp(fd.col.rgb, targetColor, mask1); \
+	} \
+}
+#else
+#define BEFORE_MATCAP
+#endif
 
 //----------------------------------------------------------------------------------------------------------------------
 // Information about variables
