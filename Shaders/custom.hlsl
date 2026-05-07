@@ -130,6 +130,51 @@ float dnkw_pick_channel(float4 v, int channel)
 }
 #define DNKW_SAMPLE_SCALAR_CH(tex, st, uv, ch) (dnkw_pick_channel(DNKW_SAMPLE(tex, st, uv), ch))
 
+// ---- VRC Light Volumes (VRCLV) indirect specular ----
+// Auto-include LightVolumes.cginc when the package is installed.
+// UnityCG / Unity built-in includes come before this file via lilToon, satisfying
+// the requirement that UnityCG.cginc precedes LightVolumes.cginc.
+#if __has_include("Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc")
+    #include "Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc"
+#endif
+
+#if defined(LV_PI)
+    // VRCLV is present — delegate to its public API
+    #define DNKW_LV_GET_SH(posWS, L0, L1r, L1g, L1b) \
+        LightVolumeSH(posWS, L0, L1r, L1g, L1b)
+    #define DNKW_LV_SPEC(f0, sm, N, V, L0, L1r, L1g, L1b) \
+        LightVolumeSpecular(f0, sm, N, V, L0, L1r, L1g, L1b)
+#else
+    // Fallback: Unity built-in light probes with de-ringing + inline GGX
+    // (identical algorithm to LightVolumeSpecular in LightVolumes.cginc)
+    float dnkw_GGX(float NoH, float roughness)
+    {
+        float f = (roughness - 1.0) * ((roughness + 1.0) * (NoH * NoH)) + 1.0;
+        return (roughness * roughness) / (3.14159265 * f * f);
+    }
+    float3 dnkw_LVSpecular(float3 f0, float smoothness, float3 N, float3 V,
+                            float3 L0, float3 L1r, float3 L1g, float3 L1b)
+    {
+        float3 sc = max(float3(dot(reflect(-L1r, N), V),
+                               dot(reflect(-L1g, N), V),
+                               dot(reflect(-L1b, N), V)), 0.0);
+        float rough = 1.0 - smoothness * 0.9;
+        float roughExp = rough * rough;
+        float3 specs = (dnkw_GGX(saturate(dot(N, normalize(normalize(L1r) + V))), roughExp)
+                      + dnkw_GGX(saturate(dot(N, normalize(normalize(L1g) + V))), roughExp)
+                      + dnkw_GGX(saturate(dot(N, normalize(normalize(L1b) + V))), roughExp)) * f0;
+        float3 cs = specs * sc;
+        return max(lerp(cs + specs * L0, cs * 3.0, smoothness) * 0.5, 0.0);
+    }
+    #define DNKW_LV_GET_SH(posWS, L0, L1r, L1g, L1b) \
+        L0  = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w); \
+        L1r = unity_SHAr.xyz * 0.565; \
+        L1g = unity_SHAg.xyz * 0.565; \
+        L1b = unity_SHAb.xyz * 0.565
+    #define DNKW_LV_SPEC(f0, sm, N, V, L0, L1r, L1g, L1b) \
+        dnkw_LVSpecular(f0, sm, N, V, L0, L1r, L1g, L1b)
+#endif
+
 
 
 
@@ -145,6 +190,10 @@ float dnkw_pick_channel(float4 v, int channel)
 		float atten = fd.attenuation * fd.shadowmix; \
 		float3 lightCol = fd.lightColor; \
 		float3 specAccum = 0; \
+		/* Sample SH once for both layers (VRCLV or Unity light probes fallback) */ \
+		float3 lv_L0, lv_L1r, lv_L1g, lv_L1b; \
+		DNKW_LV_GET_SH(fd.positionWS, lv_L0, lv_L1r, lv_L1g, lv_L1b); \
+		float3 indirSpecAccum = 0; \
 		/* Layer 1 */ \
 		if(_EnableSpec1 > 0.5) { \
 			float mask1 = DNKW_SAMPLE_SCALAR_CH(_SpecMask1, _SpecMask1_ST, uvMain, _SpecMask1_Channel); \
@@ -164,6 +213,7 @@ float dnkw_pick_channel(float4 v, int channel)
 				float power1 = lerp(8.0, 1024.0, smooth1); \
 				float specTerm1 = pow(nh1, power1) * nl1; \
 				specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
+				indirSpecAccum += overall1 * DNKW_LV_SPEC(baseCol1 * intensity1, smooth1, N1, V, lv_L0, lv_L1r, lv_L1g, lv_L1b); \
 			} \
 		} \
 		/* Layer 2 */ \
@@ -185,10 +235,11 @@ float dnkw_pick_channel(float4 v, int channel)
 				float power2 = lerp(8.0, 1024.0, smooth2); \
 				float specTerm2 = pow(nh2, power2) * nl2; \
 				specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
+				indirSpecAccum += overall2 * DNKW_LV_SPEC(baseCol2 * intensity2, smooth2, N2, V, lv_L0, lv_L1r, lv_L1g, lv_L1b); \
 			} \
 		} \
 		float3 specFinal = specAccum * lightCol * atten; \
-		fd.col.rgb += specFinal; \
+		fd.col.rgb += specFinal + indirSpecAccum; \
 	} \
 }
 
