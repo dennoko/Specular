@@ -136,10 +136,10 @@ float dnkw_pick_channel(float4 v, int channel)
 { \
 	if (_EnableSpec1 > 0.5 || _EnableSpec2 > 0.5) { \
 		float2 uvMain = fd.uvMain; \
-		float3 Norig = normalize(fd.origN); \
-		float3 Nmap  = normalize(fd.N); \
-		float3 V = normalize(fd.V); \
-		float3 L = normalize(fd.L); \
+		float3 Norig = fd.origN; \
+		float3 Nmap  = fd.N; \
+		float3 V = fd.V; \
+		float3 L = fd.L; \
 		float3 H = normalize(L + V); \
 		float atten = fd.attenuation * lerp(1.0, fd.shadowmix, _SpecShadowStrength); \
 		float3 specAccum = 0; \
@@ -149,7 +149,7 @@ float dnkw_pick_channel(float4 v, int channel)
 			float noise1 = DNKW_SAMPLE_SCALAR_CH(_SpecNoiseTex1, _SpecNoiseTex1_ST, uvMain, _SpecNoiseTex1_Channel); \
 			float overall1 = saturate(mask1 * noise1); \
 			if (overall1 > 0.0001) { \
-				float s1 = clamp(_SpecNormalStrength1, 0.0, 3.0); \
+				float s1 = _SpecNormalStrength1; \
 				float3 N1 = normalize(lerp(Norig, Nmap, s1)); \
 				float nl1 = saturate(dot(N1, L)); \
 				float nh1 = saturate(dot(N1, H)); \
@@ -167,7 +167,7 @@ float dnkw_pick_channel(float4 v, int channel)
 			float noise2 = DNKW_SAMPLE_SCALAR_CH(_SpecNoiseTex2, _SpecNoiseTex2_ST, uvMain, _SpecNoiseTex2_Channel); \
 			float overall2 = saturate(mask2 * noise2); \
 			if (overall2 > 0.0001) { \
-				float s2 = clamp(_SpecNormalStrength2, 0.0, 3.0); \
+				float s2 = _SpecNormalStrength2; \
 				float3 N2 = normalize(lerp(Norig, Nmap, s2)); \
 				float nl2 = saturate(dot(N2, L)); \
 				float nh2 = saturate(dot(N2, H)); \
