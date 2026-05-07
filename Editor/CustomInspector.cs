@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -31,6 +32,7 @@ namespace lilToon
         private MaterialProperty _SpecSmoothnessMap1;
         private MaterialProperty _SpecSmoothnessMap1_Channel;
         private MaterialProperty _SpecNormalStrength1;
+        private MaterialProperty _SpecShadowStrength;
 
         // 2nd layer
         private MaterialProperty _EnableSpec2;
@@ -106,6 +108,7 @@ namespace lilToon
             _SpecSmoothnessMap1     = FindProperty("_SpecSmoothnessMap1", props);
             _SpecSmoothnessMap1_Channel = FindProperty("_SpecSmoothnessMap1_Channel", props);
             _SpecNormalStrength1    = FindProperty("_SpecNormalStrength1", props);
+            _SpecShadowStrength     = FindProperty("_SpecShadowStrength", props);
 
             // 2nd layer
             _EnableSpec2            = FindProperty("_EnableSpec2", props);
@@ -158,7 +161,8 @@ namespace lilToon
 //                EditorGUILayout.LabelField(GetLoc("dennoko_extension"), customToggleFont);
                 EditorGUILayout.BeginVertical(boxInnerHalf);
 
-                // moved mask/noise into each layer foldout
+                m_MaterialEditor.ShaderProperty(_SpecShadowStrength, new GUIContent("影響するシャドウの強度", "0: 影の中でもスペキュラーが残る。1: 影エリアでスペキュラーが完全に消える（デフォルト）。"));
+                EditorGUILayout.Space(4);
 
                 // Specular 1st
                 isShowSpec1 = Foldout("Specular1st", "Specular 1st parameters", isShowSpec1);
@@ -456,6 +460,63 @@ namespace lilToon
             ltsto       = Shader.Find("Hidden/" + shaderName + "/TransparentOutline");
 
             // Do NOT assign OnePass/TwoPass Transparent or Lite/Multi/Optional variants to hide them from the UI
+        }
+
+        // --------------------------------------------------
+        // Schema v1 migration: linear smoothness → log scale
+        // pow(2, lerp(3,10,s)) replaces lerp(8,1024,s)
+        // Conversion: s_new = (log2(8 + 1016*s_old) - 3) / 7
+        // --------------------------------------------------
+
+        [UnityEditor.Callbacks.DidReloadScripts]
+        static void OnScriptsReloaded()
+        {
+            EditorApplication.delayCall += MigrateAllMaterials;
+        }
+
+        [MenuItem("Tools/dennoko/Migrate Specular Materials")]
+        static void MigrateAllMaterials()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:Material");
+            int count = 0;
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (mat == null || mat.shader == null) continue;
+                if (!mat.shader.name.Contains(shaderName)) continue;
+                if (MigrateMaterial(mat)) count++;
+            }
+            if (count > 0)
+            {
+                AssetDatabase.SaveAssets();
+                Debug.Log($"[dennoko Specular] Migrated {count} material(s) to schema v1 (log smoothness scale).");
+            }
+        }
+
+        // Returns true if the material was migrated.
+        static bool MigrateMaterial(Material mat)
+        {
+            // Detect old materials: _SchemaVersion is absent from the .mat file (Unity returns shader default 0)
+            // We distinguish by reading the raw YAML — old files won't contain "_SchemaVersion"
+            string path = AssetDatabase.GetAssetPath(mat);
+            if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            {
+                string yaml = File.ReadAllText(path);
+                if (yaml.Contains("_SchemaVersion")) return false; // already written → skip
+            }
+            else if ((int)mat.GetFloat("_SchemaVersion") >= 1)
+            {
+                return false;
+            }
+
+            float s1 = Mathf.Clamp01(mat.GetFloat("_SpecSmoothness1"));
+            float s2 = Mathf.Clamp01(mat.GetFloat("_SpecSmoothness2"));
+            mat.SetFloat("_SpecSmoothness1", Mathf.Clamp01((Mathf.Log(Mathf.Max(8f + 1016f * s1, 1e-6f), 2f) - 3f) / 7f));
+            mat.SetFloat("_SpecSmoothness2", Mathf.Clamp01((Mathf.Log(Mathf.Max(8f + 1016f * s2, 1e-6f), 2f) - 3f) / 7f));
+            mat.SetFloat("_SchemaVersion", 1f);
+            EditorUtility.SetDirty(mat);
+            return true;
         }
 
         // You can create a menu like this

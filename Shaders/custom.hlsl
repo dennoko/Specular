@@ -41,6 +41,7 @@
 	float4 _SpecSmoothnessMap2_ST; \
 	float _SpecNormalStrength1; \
 	float _SpecNormalStrength2; \
+	float _SpecShadowStrength; \
 	/* Custom MatCap 1 */ \
 	float _CustomMatCap1_Enable; \
 	float4 _CustomMatCap1_Color; \
@@ -123,10 +124,8 @@
 /* channel: 0 R, 1 G, 2 B, 3 A */
 float dnkw_pick_channel(float4 v, int channel)
 {
-	if(channel == 1) return v.g;
-	if(channel == 2) return v.b;
-	if(channel == 3) return v.a;
-	return v.r;
+	float4 arr = float4(v.r, v.g, v.b, v.a);
+	return arr[channel];
 }
 #define DNKW_SAMPLE_SCALAR_CH(tex, st, uv, ch) (dnkw_pick_channel(DNKW_SAMPLE(tex, st, uv), ch))
 
@@ -142,8 +141,7 @@ float dnkw_pick_channel(float4 v, int channel)
 		float3 V = normalize(fd.V); \
 		float3 L = normalize(fd.L); \
 		float3 H = normalize(L + V); \
-		float atten = fd.attenuation * fd.shadowmix; \
-		float3 lightCol = fd.lightColor; \
+		float atten = fd.attenuation * lerp(1.0, fd.shadowmix, _SpecShadowStrength); \
 		float3 specAccum = 0; \
 		/* Layer 1 */ \
 		if(_EnableSpec1 > 0.5) { \
@@ -155,13 +153,10 @@ float dnkw_pick_channel(float4 v, int channel)
 				float3 N1 = normalize(lerp(Norig, Nmap, s1)); \
 				float nl1 = saturate(dot(N1, L)); \
 				float nh1 = saturate(dot(N1, H)); \
-				float3 colTex1 = DNKW_SAMPLE_COLOR(_SpecColorMap1, _SpecColorMap1_ST, uvMain); \
-				float mapI1 = DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap1, _SpecIntensityMap1_ST, uvMain, _SpecIntensityMap1_Channel); \
-				float mapS1 = DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap1, _SpecSmoothnessMap1_ST, uvMain, _SpecSmoothnessMap1_Channel); \
-				float3 baseCol1 = (_UseSpecColorMap1 > 0.5 ? colTex1 : float3(1,1,1)) * _SpecColor1.rgb; \
-				float intensity1 = _SpecIntensity1 * (_UseSpecIntensityMap1 > 0.5 ? mapI1 : 1.0); \
-				float smooth1 = saturate(_SpecSmoothness1 * (_UseSpecSmoothnessMap1 > 0.5 ? mapS1 : 1.0)); \
-				float power1 = lerp(8.0, 1024.0, smooth1); \
+				float3 baseCol1 = (_UseSpecColorMap1 > 0.5 ? DNKW_SAMPLE_COLOR(_SpecColorMap1, _SpecColorMap1_ST, uvMain) : float3(1,1,1)) * _SpecColor1.rgb; \
+				float intensity1 = _SpecIntensity1 * (_UseSpecIntensityMap1 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap1, _SpecIntensityMap1_ST, uvMain, _SpecIntensityMap1_Channel) : 1.0); \
+				float smooth1 = saturate(_SpecSmoothness1 * (_UseSpecSmoothnessMap1 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap1, _SpecSmoothnessMap1_ST, uvMain, _SpecSmoothnessMap1_Channel) : 1.0)); \
+				float power1 = pow(2.0, lerp(3.0, 10.0, smooth1)); \
 				float specTerm1 = pow(nh1, power1) * nl1; \
 				specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
 			} \
@@ -176,19 +171,15 @@ float dnkw_pick_channel(float4 v, int channel)
 				float3 N2 = normalize(lerp(Norig, Nmap, s2)); \
 				float nl2 = saturate(dot(N2, L)); \
 				float nh2 = saturate(dot(N2, H)); \
-				float3 colTex2 = DNKW_SAMPLE_COLOR(_SpecColorMap2, _SpecColorMap2_ST, uvMain); \
-				float mapI2 = DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap2, _SpecIntensityMap2_ST, uvMain, _SpecIntensityMap2_Channel); \
-				float mapS2 = DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap2, _SpecSmoothnessMap2_ST, uvMain, _SpecSmoothnessMap2_Channel); \
-				float3 baseCol2 = (_UseSpecColorMap2 > 0.5 ? colTex2 : float3(1,1,1)) * _SpecColor2.rgb; \
-				float intensity2 = _SpecIntensity2 * (_UseSpecIntensityMap2 > 0.5 ? mapI2 : 1.0); \
-				float smooth2 = saturate(_SpecSmoothness2 * (_UseSpecSmoothnessMap2 > 0.5 ? mapS2 : 1.0)); \
-				float power2 = lerp(8.0, 1024.0, smooth2); \
+				float3 baseCol2 = (_UseSpecColorMap2 > 0.5 ? DNKW_SAMPLE_COLOR(_SpecColorMap2, _SpecColorMap2_ST, uvMain) : float3(1,1,1)) * _SpecColor2.rgb; \
+				float intensity2 = _SpecIntensity2 * (_UseSpecIntensityMap2 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap2, _SpecIntensityMap2_ST, uvMain, _SpecIntensityMap2_Channel) : 1.0); \
+				float smooth2 = saturate(_SpecSmoothness2 * (_UseSpecSmoothnessMap2 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap2, _SpecSmoothnessMap2_ST, uvMain, _SpecSmoothnessMap2_Channel) : 1.0)); \
+				float power2 = pow(2.0, lerp(3.0, 10.0, smooth2)); \
 				float specTerm2 = pow(nh2, power2) * nl2; \
 				specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
 			} \
 		} \
-		float3 specFinal = specAccum * lightCol * atten; \
-		fd.col.rgb += specFinal; \
+		fd.col.rgb += specAccum * (fd.lightColor * atten + fd.addLightColor); \
 	} \
 }
 

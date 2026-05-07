@@ -51,6 +51,8 @@
                 // Normal strength per layer
                                 _SpecNormalStrength1          ("Normal Strength 1", Range(0,3)) = 1
                                 _SpecNormalStrength2          ("Normal Strength 2", Range(0,3)) = 1
+                                _SpecShadowStrength           ("Specular Shadow Strength", Range(0,1)) = 1.0
+                [HideInInspector] _SchemaVersion              ("Schema Version", Float) = 0
         //----------------------------------------------------------------------------------------------------------------------
         // Custom MatCap 1
                 [lilToggle]     _CustomMatCap1_Enable         ("Enable MatCap 1", Float) = 0
