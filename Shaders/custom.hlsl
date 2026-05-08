@@ -41,6 +41,13 @@
 	float4 _SpecSmoothnessMap2_ST; \
 	float _SpecNormalStrength1; \
 	float _SpecNormalStrength2; \
+	/* Fresnel rim */ \
+	float _SpecUseFresnel1; \
+	float _SpecUseFresnel2; \
+	float4 _SpecF0Color1; \
+	float4 _SpecF0Color2; \
+	float _SpecFresnelStrength1; \
+	float _SpecFresnelStrength2; \
 	/* Custom MatCap 1 */ \
 	float _CustomMatCap1_Enable; \
 	float4 _CustomMatCap1_Color; \
@@ -157,6 +164,11 @@ float dnkw_pick_channel(float4 v, int channel)
 				float power1 = pow(2.0, lerp(3.0, 10.0, smooth1)); \
 				float specTerm1 = pow(nh1, power1) * nl1; \
 				specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
+				if (_SpecUseFresnel1 > 0.5) { \
+					float VdotN1 = saturate(dot(V, N1)); \
+					float rim1 = pow(1.0 - VdotN1, 5.0); \
+					specAccum += overall1 * _SpecF0Color1.rgb * _SpecFresnelStrength1 * rim1; \
+				} \
 			} \
 		} \
 		/* Layer 2 */ \
@@ -175,6 +187,11 @@ float dnkw_pick_channel(float4 v, int channel)
 				float power2 = pow(2.0, lerp(3.0, 10.0, smooth2)); \
 				float specTerm2 = pow(nh2, power2) * nl2; \
 				specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
+				if (_SpecUseFresnel2 > 0.5) { \
+					float VdotN2 = saturate(dot(V, N2)); \
+					float rim2 = pow(1.0 - VdotN2, 5.0); \
+					specAccum += overall2 * _SpecF0Color2.rgb * _SpecFresnelStrength2 * rim2; \
+				} \
 			} \
 		} \
 		fd.col.rgb += specAccum * (fd.lightColor * atten + fd.addLightColor); \

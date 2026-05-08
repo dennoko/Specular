@@ -32,6 +32,9 @@ namespace lilToon
         private MaterialProperty _SpecSmoothnessMap1;
         private MaterialProperty _SpecSmoothnessMap1_Channel;
         private MaterialProperty _SpecNormalStrength1;
+        private MaterialProperty _SpecUseFresnel1;
+        private MaterialProperty _SpecF0Color1;
+        private MaterialProperty _SpecFresnelStrength1;
 
         // 2nd layer
         private MaterialProperty _EnableSpec2;
@@ -47,6 +50,9 @@ namespace lilToon
         private MaterialProperty _SpecSmoothnessMap2;
         private MaterialProperty _SpecSmoothnessMap2_Channel;
         private MaterialProperty _SpecNormalStrength2;
+        private MaterialProperty _SpecUseFresnel2;
+        private MaterialProperty _SpecF0Color2;
+        private MaterialProperty _SpecFresnelStrength2;
 
         private static bool isShowCustomProperties;
         private static bool isShowSpec1;
@@ -106,6 +112,9 @@ namespace lilToon
             _SpecSmoothnessMap1     = FindProperty("_SpecSmoothnessMap1", props);
             _SpecSmoothnessMap1_Channel = FindProperty("_SpecSmoothnessMap1_Channel", props);
             _SpecNormalStrength1    = FindProperty("_SpecNormalStrength1", props);
+            _SpecUseFresnel1        = FindProperty("_SpecUseFresnel1", props);
+            _SpecF0Color1           = FindProperty("_SpecF0Color1", props);
+            _SpecFresnelStrength1   = FindProperty("_SpecFresnelStrength1", props);
 
             // 2nd layer
             _EnableSpec2            = FindProperty("_EnableSpec2", props);
@@ -121,7 +130,10 @@ namespace lilToon
             _SpecSmoothnessMap2     = FindProperty("_SpecSmoothnessMap2", props);
             _SpecSmoothnessMap2_Channel = FindProperty("_SpecSmoothnessMap2_Channel", props);
             _SpecNormalStrength2    = FindProperty("_SpecNormalStrength2", props);
-            
+            _SpecUseFresnel2        = FindProperty("_SpecUseFresnel2", props);
+            _SpecF0Color2           = FindProperty("_SpecF0Color2", props);
+            _SpecFresnelStrength2   = FindProperty("_SpecFresnelStrength2", props);
+
             // Custom MatCap 1
             _CustomMatCap1_Enable           = FindProperty("_CustomMatCap1_Enable", props);
             _CustomMatCap1_Color            = FindProperty("_CustomMatCap1_Color", props);
@@ -214,6 +226,14 @@ namespace lilToon
                     // Normal Strength 1
                     m_MaterialEditor.ShaderProperty(_SpecNormalStrength1, new GUIContent("ノーマル強度", "1層目のノーマルマップ強度。0で無効、1でそのまま、2以上で傾きを強くします。値域が破綻しないよう内部で補間します。"));
 
+                    // Fresnel rim 1
+                    m_MaterialEditor.ShaderProperty(_SpecUseFresnel1, new GUIContent("フレネルリム有効化", "視線に対して斜めになるシルエット端にリムハイライトを追加します。レザーの端の光沢感に有効です。"));
+                    if (_SpecUseFresnel1.floatValue > 0.5f)
+                    {
+                        DrawColorWithHex(_SpecF0Color1, "リムカラー", "シルエット端に加算するリムハイライトの色。白=ニュートラル、色をつけると有色リムになります。");
+                        m_MaterialEditor.ShaderProperty(_SpecFresnelStrength1, new GUIContent("リム強度", "フレネルリムの強さ。大きいほど端が明るくなります。"));
+                    }
+
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.EndVertical();
                 }
@@ -274,6 +294,14 @@ namespace lilToon
 
                     // Normal Strength 2
                     m_MaterialEditor.ShaderProperty(_SpecNormalStrength2, new GUIContent("ノーマル強度", "2層目のノーマルマップ強度。0で無効、1でそのまま、2以上で傾きを強くします。値域が破綻しないよう内部で補間します。"));
+
+                    // Fresnel rim 2
+                    m_MaterialEditor.ShaderProperty(_SpecUseFresnel2, new GUIContent("フレネルリム有効化", "視線に対して斜めになるシルエット端にリムハイライトを追加します。レザーの端の光沢感に有効です。"));
+                    if (_SpecUseFresnel2.floatValue > 0.5f)
+                    {
+                        DrawColorWithHex(_SpecF0Color2, "リムカラー", "シルエット端に加算するリムハイライトの色。白=ニュートラル、色をつけると有色リムになります。");
+                        m_MaterialEditor.ShaderProperty(_SpecFresnelStrength2, new GUIContent("リム強度", "フレネルリムの強さ。大きいほど端が明るくなります。"));
+                    }
 
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.EndVertical();
