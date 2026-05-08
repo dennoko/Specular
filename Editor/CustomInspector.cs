@@ -32,7 +32,6 @@ namespace lilToon
         private MaterialProperty _SpecSmoothnessMap1;
         private MaterialProperty _SpecSmoothnessMap1_Channel;
         private MaterialProperty _SpecNormalStrength1;
-        private MaterialProperty _SpecShadowStrength;
 
         // 2nd layer
         private MaterialProperty _EnableSpec2;
@@ -66,7 +65,6 @@ namespace lilToon
         private MaterialProperty _CustomMatCap1_UseReflection;
         private MaterialProperty _CustomMatCap1_DisableBackface;
         private MaterialProperty _CustomMatCap1_EnableLighting;
-        private MaterialProperty _CustomMatCap1_ShadowStrength;
         private MaterialProperty _CustomMatCap1_Blur;
         private MaterialProperty _CustomMatCap1_Alpha;
 
@@ -108,7 +106,6 @@ namespace lilToon
             _SpecSmoothnessMap1     = FindProperty("_SpecSmoothnessMap1", props);
             _SpecSmoothnessMap1_Channel = FindProperty("_SpecSmoothnessMap1_Channel", props);
             _SpecNormalStrength1    = FindProperty("_SpecNormalStrength1", props);
-            _SpecShadowStrength     = FindProperty("_SpecShadowStrength", props);
 
             // 2nd layer
             _EnableSpec2            = FindProperty("_EnableSpec2", props);
@@ -135,7 +132,6 @@ namespace lilToon
             _CustomMatCap1_UseReflection    = FindProperty("_CustomMatCap1_UseReflection", props);
             _CustomMatCap1_DisableBackface  = FindProperty("_CustomMatCap1_DisableBackface", props);
             _CustomMatCap1_EnableLighting   = FindProperty("_CustomMatCap1_EnableLighting", props);
-            _CustomMatCap1_ShadowStrength   = FindProperty("_CustomMatCap1_ShadowStrength", props);
             _CustomMatCap1_Blur             = FindProperty("_CustomMatCap1_Blur", props);
             _CustomMatCap1_Alpha            = FindProperty("_CustomMatCap1_Alpha", props);
             
@@ -160,9 +156,6 @@ namespace lilToon
                 EditorGUILayout.BeginVertical(boxOuter);
 //                EditorGUILayout.LabelField(GetLoc("dennoko_extension"), customToggleFont);
                 EditorGUILayout.BeginVertical(boxInnerHalf);
-
-                m_MaterialEditor.ShaderProperty(_SpecShadowStrength, new GUIContent("影響するシャドウの強度", "0: 影の中でもスペキュラーが残る。1: 影エリアでスペキュラーが完全に消える（デフォルト）。"));
-                EditorGUILayout.Space(4);
 
                 // Specular 1st
                 isShowSpec1 = Foldout("Specular1st", "Specular 1st parameters", isShowSpec1);
@@ -296,7 +289,7 @@ namespace lilToon
                     bool matCap1Valid = _CustomMatCap1_Enable != null && _CustomMatCap1_Tex != null && _CustomMatCap1_Color != null &&
                                         _CustomMatCap1_Blend != null && _CustomMatCap1_Blur != null && _CustomMatCap1_Mask != null &&
                                         _CustomMatCap1_BumpScale != null && _CustomMatCap1_UseReflection != null && _CustomMatCap1_DisableBackface != null &&
-                                        _CustomMatCap1_EnableLighting != null && _CustomMatCap1_ShadowStrength != null &&
+                                        _CustomMatCap1_EnableLighting != null &&
                                         _CustomMatCap1_Alpha != null;
 
                     if (matCap1Valid)
@@ -333,8 +326,7 @@ namespace lilToon
                         m_MaterialEditor.ShaderProperty(_CustomMatCap1_DisableBackface, new GUIContent("Disable on Backface", "If enabled, the MatCap will not be applied to backfaces."));
 
                         m_MaterialEditor.ShaderProperty(_CustomMatCap1_EnableLighting, new GUIContent("Enable Lighting"));
-                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_ShadowStrength, new GUIContent("Shadow Strength"));
-                        
+
                         EditorGUILayout.EndVertical();
                     }
                     else

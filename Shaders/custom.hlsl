@@ -41,7 +41,6 @@
 	float4 _SpecSmoothnessMap2_ST; \
 	float _SpecNormalStrength1; \
 	float _SpecNormalStrength2; \
-	float _SpecShadowStrength; \
 	/* Custom MatCap 1 */ \
 	float _CustomMatCap1_Enable; \
 	float4 _CustomMatCap1_Color; \
@@ -51,7 +50,6 @@
 	int _CustomMatCap1_UseReflection; \
 	int _CustomMatCap1_DisableBackface; \
 	float _CustomMatCap1_EnableLighting; \
-	float _CustomMatCap1_ShadowStrength; \
 	float _CustomMatCap1_Blur; \
 	float _CustomMatCap1_Alpha; \
 	float4 _CustomMatCap1_Tex_ST; \
@@ -141,7 +139,7 @@ float dnkw_pick_channel(float4 v, int channel)
 		float3 V = fd.V; \
 		float3 L = fd.L; \
 		float3 H = normalize(L + V); \
-		float atten = fd.attenuation * lerp(1.0, fd.shadowmix, _SpecShadowStrength); \
+		float atten = fd.attenuation * fd.shadowmix; \
 		float3 specAccum = 0; \
 		/* Layer 1 */ \
 		if(_EnableSpec1 > 0.5) { \
@@ -210,7 +208,7 @@ float dnkw_pick_channel(float4 v, int channel)
 		/* Improved Blend Logic: Apply Mask via Lerp */ \
 		float3 targetColor = fd.col.rgb; \
 		int blend1 = _CustomMatCap1_Blend; \
-		float shadowFac = lerp(1.0, fd.attenuation * fd.shadowmix, _CustomMatCap1_ShadowStrength); \
+		float shadowFac = fd.attenuation * fd.shadowmix; \
 		float3 lightFac = lerp(float3(1,1,1), fd.lightColor, _CustomMatCap1_EnableLighting); \
 		mcColor *= shadowFac * lightFac; \
 		if (blend1 == 0) targetColor += mcColor; /* Add */ \
