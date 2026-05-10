@@ -13,14 +13,11 @@
 #endif
 
 #if !DNKW_VRCLV_AVAILABLE
-	/* Fallback-only helper for unused parameters in compatibility stubs */
-	#define UNUSED_PARAM(x) (void)(x)
 	/* Matches LightVolumes.cginc LV_SampleLightProbeDering scale for Unity probe L1 terms */
 	#define DNKW_SH_L1_SCALE 0.565f
 	void dnkw_lightVolumeSHFallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
 	{
 		/* Fallback uses unity_SH* probe uniforms (per-object), not worldPos volume sampling */
-		UNUSED_PARAM(worldPos);
 		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
 		/* DNKW_SH_L1_SCALE reduces SH ringing artifacts in probe L1 terms and matches LightVolumes.cginc fallback */
 		L1r = unity_SHAr.xyz * DNKW_SH_L1_SCALE;
@@ -29,15 +26,6 @@
 	}
 	float3 dnkw_lightVolumeSpecularFallback(float3 albedo, float smoothness, float metallic, float3 worldNormal, float3 viewDir, float3 L0, float3 L1r, float3 L1g, float3 L1b)
 	{
-		UNUSED_PARAM(albedo);
-		UNUSED_PARAM(smoothness);
-		UNUSED_PARAM(metallic);
-		UNUSED_PARAM(worldNormal);
-		UNUSED_PARAM(viewDir);
-		UNUSED_PARAM(L0);
-		UNUSED_PARAM(L1r);
-		UNUSED_PARAM(L1g);
-		UNUSED_PARAM(L1b);
 		/* Without LightVolumes.cginc we keep prior behavior and avoid approximating a different spec model */
 		return 0;
 	}
