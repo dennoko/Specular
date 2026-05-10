@@ -172,6 +172,7 @@ float dnkw_pick_channel(float4 v, int channel)
 				float power1 = pow(2.0, lerp(3.0, 10.0, smooth1)); \
 				float specTerm1 = pow(nh1, power1) * nl1; \
 				specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
+				/* LightVolumeSpecular already uses baseCol as albedo internally */ \
 				lvSpecAccum += overall1 * intensity1 * LightVolumeSpecular(baseCol1, smooth1, lvMetallic, N1, V, L0, L1r, L1g, L1b); \
 				if (_SpecUseFresnel1 > 0.5) { \
 					float VdotN1 = saturate(dot(V, N1)); \
@@ -196,6 +197,7 @@ float dnkw_pick_channel(float4 v, int channel)
 				float power2 = pow(2.0, lerp(3.0, 10.0, smooth2)); \
 				float specTerm2 = pow(nh2, power2) * nl2; \
 				specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
+				/* LightVolumeSpecular already uses baseCol as albedo internally */ \
 				lvSpecAccum += overall2 * intensity2 * LightVolumeSpecular(baseCol2, smooth2, lvMetallic, N2, V, L0, L1r, L1g, L1b); \
 				if (_SpecUseFresnel2 > 0.5) { \
 					float VdotN2 = saturate(dot(V, N2)); \
