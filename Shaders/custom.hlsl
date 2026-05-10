@@ -1,9 +1,33 @@
 //----------------------------------------------------------------------------------------------------------------------
 // Macro
 
-// VRC Light Volumes (UnityCG must be included first for fallback to light probes)
+// VRC Light Volumes optional integration
 #include "UnityCG.cginc"
-#include "Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc"
+#if defined(__has_include)
+	#if __has_include("Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc")
+		#include "Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc"
+		#define DNKW_VRCLV_AVAILABLE 1
+	#endif
+#endif
+
+#if !defined(DNKW_VRCLV_AVAILABLE)
+	void dnkw_lightvolume_sh_fallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
+	{
+		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+		L1r = unity_SHAr.xyz * 0.565f;
+		L1g = unity_SHAg.xyz * 0.565f;
+		L1b = unity_SHAb.xyz * 0.565f;
+	}
+	float3 dnkw_lightvolume_specular_fallback(float3 albedo, float smoothness, float metallic, float3 worldNormal, float3 viewDir, float3 L0, float3 L1r, float3 L1g, float3 L1b)
+	{
+		return 0;
+	}
+	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) dnkw_lightvolume_sh_fallback((worldPos), (L0), (L1r), (L1g), (L1b))
+	#define DNKW_LIGHTVOLUME_SPECULAR(albedo, smoothness, metallic, worldNormal, viewDir, L0, L1r, L1g, L1b) dnkw_lightvolume_specular_fallback((albedo), (smoothness), (metallic), (worldNormal), (viewDir), (L0), (L1r), (L1g), (L1b))
+#else
+	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) LightVolumeSH((worldPos), (L0), (L1r), (L1g), (L1b))
+	#define DNKW_LIGHTVOLUME_SPECULAR(albedo, smoothness, metallic, worldNormal, viewDir, L0, L1r, L1g, L1b) LightVolumeSpecular((albedo), (smoothness), (metallic), (worldNormal), (viewDir), (L0), (L1r), (L1g), (L1b))
+#endif
 
 // Custom variables
 //#define LIL_CUSTOM_PROPERTIES \
@@ -156,7 +180,7 @@ float dnkw_pick_channel(float4 v, int channel)
 		float3 specAccum = 0; \
 		float3 lvSpecAccum = 0; \
 		float3 L0, L1r, L1g, L1b; \
-		LightVolumeSH(fd.positionWS, L0, L1r, L1g, L1b); \
+		DNKW_LIGHTVOLUME_SH(fd.positionWS, L0, L1r, L1g, L1b); \
 		/* Layer 1 */ \
 		if(_EnableSpec1 > 0.5) { \
 			float mask1 = DNKW_SAMPLE_SCALAR_CH(_SpecMask1, _SpecMask1_ST, uvMain, _SpecMask1_Channel); \
@@ -174,7 +198,7 @@ float dnkw_pick_channel(float4 v, int channel)
 				float specTerm1 = pow(nh1, power1) * nl1; \
 				specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
 				/* LightVolumeSpecular computes from baseCol1/F0 internally; do not multiply baseCol again */ \
-				lvSpecAccum += overall1 * intensity1 * LightVolumeSpecular(baseCol1, smooth1, LV_F0_METALLIC, N1, V, L0, L1r, L1g, L1b); \
+				lvSpecAccum += overall1 * intensity1 * DNKW_LIGHTVOLUME_SPECULAR(baseCol1, smooth1, LV_F0_METALLIC, N1, V, L0, L1r, L1g, L1b); \
 				if (_SpecUseFresnel1 > 0.5) { \
 					float VdotN1 = saturate(dot(V, N1)); \
 					float rim1 = pow(1.0 - VdotN1, 5.0); \
@@ -199,7 +223,7 @@ float dnkw_pick_channel(float4 v, int channel)
 				float specTerm2 = pow(nh2, power2) * nl2; \
 				specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
 				/* LightVolumeSpecular computes from baseCol2/F0 internally; do not multiply baseCol again */ \
-				lvSpecAccum += overall2 * intensity2 * LightVolumeSpecular(baseCol2, smooth2, LV_F0_METALLIC, N2, V, L0, L1r, L1g, L1b); \
+				lvSpecAccum += overall2 * intensity2 * DNKW_LIGHTVOLUME_SPECULAR(baseCol2, smooth2, LV_F0_METALLIC, N2, V, L0, L1r, L1g, L1b); \
 				if (_SpecUseFresnel2 > 0.5) { \
 					float VdotN2 = saturate(dot(V, N2)); \
 					float rim2 = pow(1.0 - VdotN2, 5.0); \
