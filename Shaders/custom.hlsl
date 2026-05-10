@@ -15,27 +15,28 @@
 #endif
 
 #if !DNKW_VRCLV_AVAILABLE
-	#define DNKW_UNUSED(x) (void)(x)
+	#define DNKW_FALLBACK_UNUSED_PARAM(x) (void)(x)
+	#define DNKW_SH_L1_SCALE 0.565f
 	void dnkw_lightvolume_sh_fallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
 	{
-		DNKW_UNUSED(worldPos);
+		DNKW_FALLBACK_UNUSED_PARAM(worldPos);
 		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-		/* 0.565 reduces SH ringing artefacts in probe L1 terms and matches LightVolumes.cginc fallback */
-		L1r = unity_SHAr.xyz * 0.565f;
-		L1g = unity_SHAg.xyz * 0.565f;
-		L1b = unity_SHAb.xyz * 0.565f;
+		/* DNKW_SH_L1_SCALE reduces SH ringing artefacts in probe L1 terms and matches LightVolumes.cginc fallback */
+		L1r = unity_SHAr.xyz * DNKW_SH_L1_SCALE;
+		L1g = unity_SHAg.xyz * DNKW_SH_L1_SCALE;
+		L1b = unity_SHAb.xyz * DNKW_SH_L1_SCALE;
 	}
 	float3 dnkw_lightvolume_specular_fallback(float3 albedo, float smoothness, float metallic, float3 worldNormal, float3 viewDir, float3 L0, float3 L1r, float3 L1g, float3 L1b)
 	{
-		DNKW_UNUSED(albedo);
-		DNKW_UNUSED(smoothness);
-		DNKW_UNUSED(metallic);
-		DNKW_UNUSED(worldNormal);
-		DNKW_UNUSED(viewDir);
-		DNKW_UNUSED(L0);
-		DNKW_UNUSED(L1r);
-		DNKW_UNUSED(L1g);
-		DNKW_UNUSED(L1b);
+		DNKW_FALLBACK_UNUSED_PARAM(albedo);
+		DNKW_FALLBACK_UNUSED_PARAM(smoothness);
+		DNKW_FALLBACK_UNUSED_PARAM(metallic);
+		DNKW_FALLBACK_UNUSED_PARAM(worldNormal);
+		DNKW_FALLBACK_UNUSED_PARAM(viewDir);
+		DNKW_FALLBACK_UNUSED_PARAM(L0);
+		DNKW_FALLBACK_UNUSED_PARAM(L1r);
+		DNKW_FALLBACK_UNUSED_PARAM(L1g);
+		DNKW_FALLBACK_UNUSED_PARAM(L1b);
 		return 0;
 	}
 	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) dnkw_lightvolume_sh_fallback((worldPos), (L0), (L1r), (L1g), (L1b))
