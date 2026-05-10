@@ -15,33 +15,34 @@
 #endif
 
 #if !DNKW_VRCLV_AVAILABLE
-	#define DNKW_IGNORE_PARAM(x) (void)(x)
+	#define UNUSED_PARAM(x) (void)(x)
 	/* 0.565 ~= sqrt(1/pi), used in LightVolumes probe deringing for L1 SH terms */
 	#define DNKW_SH_L1_SCALE 0.565f
-	void dnkw_lightvolume_sh_fallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
+	void dnkw_lightVolumeSHFallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
 	{
-		DNKW_IGNORE_PARAM(worldPos);
+		UNUSED_PARAM(worldPos);
 		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
 		/* DNKW_SH_L1_SCALE reduces SH ringing artefacts in probe L1 terms and matches LightVolumes.cginc fallback */
 		L1r = unity_SHAr.xyz * DNKW_SH_L1_SCALE;
 		L1g = unity_SHAg.xyz * DNKW_SH_L1_SCALE;
 		L1b = unity_SHAb.xyz * DNKW_SH_L1_SCALE;
 	}
-	float3 dnkw_lightvolume_specular_fallback(float3 albedo, float smoothness, float metallic, float3 worldNormal, float3 viewDir, float3 L0, float3 L1r, float3 L1g, float3 L1b)
+	float3 dnkw_lightVolumeSpecularFallback(float3 albedo, float smoothness, float metallic, float3 worldNormal, float3 viewDir, float3 L0, float3 L1r, float3 L1g, float3 L1b)
 	{
-		DNKW_IGNORE_PARAM(albedo);
-		DNKW_IGNORE_PARAM(smoothness);
-		DNKW_IGNORE_PARAM(metallic);
-		DNKW_IGNORE_PARAM(worldNormal);
-		DNKW_IGNORE_PARAM(viewDir);
-		DNKW_IGNORE_PARAM(L0);
-		DNKW_IGNORE_PARAM(L1r);
-		DNKW_IGNORE_PARAM(L1g);
-		DNKW_IGNORE_PARAM(L1b);
+		UNUSED_PARAM(albedo);
+		UNUSED_PARAM(smoothness);
+		UNUSED_PARAM(metallic);
+		UNUSED_PARAM(worldNormal);
+		UNUSED_PARAM(viewDir);
+		UNUSED_PARAM(L0);
+		UNUSED_PARAM(L1r);
+		UNUSED_PARAM(L1g);
+		UNUSED_PARAM(L1b);
+		/* Without LightVolumes.cginc we keep prior behavior and avoid approximating a different spec model */
 		return 0;
 	}
-	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) dnkw_lightvolume_sh_fallback((worldPos), (L0), (L1r), (L1g), (L1b))
-	#define DNKW_LIGHTVOLUME_SPECULAR(albedo, smoothness, metallic, worldNormal, viewDir, L0, L1r, L1g, L1b) dnkw_lightvolume_specular_fallback((albedo), (smoothness), (metallic), (worldNormal), (viewDir), (L0), (L1r), (L1g), (L1b))
+	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) dnkw_lightVolumeSHFallback((worldPos), (L0), (L1r), (L1g), (L1b))
+	#define DNKW_LIGHTVOLUME_SPECULAR(albedo, smoothness, metallic, worldNormal, viewDir, L0, L1r, L1g, L1b) dnkw_lightVolumeSpecularFallback((albedo), (smoothness), (metallic), (worldNormal), (viewDir), (L0), (L1r), (L1g), (L1b))
 #else
 	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) LightVolumeSH((worldPos), (L0), (L1r), (L1g), (L1b))
 	#define DNKW_LIGHTVOLUME_SPECULAR(albedo, smoothness, metallic, worldNormal, viewDir, L0, L1r, L1g, L1b) LightVolumeSpecular((albedo), (smoothness), (metallic), (worldNormal), (viewDir), (L0), (L1r), (L1g), (L1b))
