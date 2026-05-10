@@ -3,18 +3,17 @@
 
 // VRC Light Volumes optional integration
 #include "UnityCG.cginc"
-#if defined(__has_include)
-	#if __has_include("Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc")
-		#include "Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc"
-		#define DNKW_VRCLV_AVAILABLE 1
-	#else
-		#define DNKW_VRCLV_AVAILABLE 0
-	#endif
+/* Enable this define only when Packages/red.sim.lightvolumes is installed */
+/* #define DNKW_ENABLE_VRCLV 1 */
+#if defined(DNKW_ENABLE_VRCLV)
+	#include "Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc"
+	#define DNKW_VRCLV_AVAILABLE 1
 #else
 	#define DNKW_VRCLV_AVAILABLE 0
 #endif
 
 #if !DNKW_VRCLV_AVAILABLE
+	/* Fallback-only helper for unused parameters in compatibility stubs */
 	#define UNUSED_PARAM(x) (void)(x)
 	/* 0.565 ~= sqrt(1/pi), used in LightVolumes probe deringing for L1 SH terms */
 	#define DNKW_SH_L1_SCALE 0.565f
@@ -22,7 +21,7 @@
 	{
 		UNUSED_PARAM(worldPos);
 		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-		/* DNKW_SH_L1_SCALE reduces SH ringing artefacts in probe L1 terms and matches LightVolumes.cginc fallback */
+		/* DNKW_SH_L1_SCALE reduces SH ringing artifacts in probe L1 terms and matches LightVolumes.cginc fallback */
 		L1r = unity_SHAr.xyz * DNKW_SH_L1_SCALE;
 		L1g = unity_SHAg.xyz * DNKW_SH_L1_SCALE;
 		L1b = unity_SHAb.xyz * DNKW_SH_L1_SCALE;
