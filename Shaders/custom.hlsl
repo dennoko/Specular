@@ -3,7 +3,7 @@
 
 // VRC Light Volumes optional integration
 #include "UnityCG.cginc"
-/* Enable this define only when Packages/red.sim.lightvolumes is installed */
+/* If Packages/red.sim.lightvolumes is installed, uncomment next line to enable VRCLV includes */
 /* #define DNKW_ENABLE_VRCLV 1 */
 #if defined(DNKW_ENABLE_VRCLV)
 	#include "Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc"
