@@ -1,6 +1,41 @@
 //----------------------------------------------------------------------------------------------------------------------
 // Macro
 
+// VRC Light Volumes optional integration
+#include "UnityCG.cginc"
+/* If Packages/red.sim.lightvolumes is installed, uncomment next line to enable VRCLV includes */
+/* #define DNKW_ENABLE_VRCLV 1 */
+#if defined(DNKW_ENABLE_VRCLV)
+	#include "Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc"
+	#define DNKW_VRCLV_AVAILABLE 1
+#else
+	#define DNKW_VRCLV_AVAILABLE 0
+#endif
+
+#if !DNKW_VRCLV_AVAILABLE
+	/* Matches LightVolumes.cginc LV_SampleLightProbeDering scale for Unity probe L1 terms */
+	#define DNKW_SH_L1_SCALE 0.565f
+	void dnkw_lightVolumeSHFallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
+	{
+		/* Fallback uses unity_SH* probe uniforms (per-object), not worldPos volume sampling */
+		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+		/* DNKW_SH_L1_SCALE reduces SH ringing artifacts in probe L1 terms and matches LightVolumes.cginc fallback */
+		L1r = unity_SHAr.xyz * DNKW_SH_L1_SCALE;
+		L1g = unity_SHAg.xyz * DNKW_SH_L1_SCALE;
+		L1b = unity_SHAb.xyz * DNKW_SH_L1_SCALE;
+	}
+	float3 dnkw_lightVolumeSpecularFallback(float3 albedo, float smoothness, float metallic, float3 worldNormal, float3 viewDir, float3 L0, float3 L1r, float3 L1g, float3 L1b)
+	{
+		/* Without LightVolumes.cginc we keep prior behavior and avoid approximating a different spec model */
+		return 0;
+	}
+	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) dnkw_lightVolumeSHFallback((worldPos), (L0), (L1r), (L1g), (L1b))
+	#define DNKW_LIGHTVOLUME_SPECULAR(albedo, smoothness, metallic, worldNormal, viewDir, L0, L1r, L1g, L1b) dnkw_lightVolumeSpecularFallback((albedo), (smoothness), (metallic), (worldNormal), (viewDir), (L0), (L1r), (L1g), (L1b))
+#else
+	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) LightVolumeSH((worldPos), (L0), (L1r), (L1g), (L1b))
+	#define DNKW_LIGHTVOLUME_SPECULAR(albedo, smoothness, metallic, worldNormal, viewDir, L0, L1r, L1g, L1b) LightVolumeSpecular((albedo), (smoothness), (metallic), (worldNormal), (viewDir), (L0), (L1r), (L1g), (L1b))
+#endif
+
 // Custom variables
 //#define LIL_CUSTOM_PROPERTIES \
 //    float _CustomVariable;
@@ -147,7 +182,12 @@ float dnkw_pick_channel(float4 v, int channel)
 		float3 L = fd.L; \
 		float3 H = normalize(L + V); \
 		float atten = fd.attenuation * fd.shadowmix; \
+		/* Fixed metallic=1 uses baseCol as F0 (specular color) for LightVolumeSpecular */ \
+		const float LV_F0_METALLIC = 1.0; \
 		float3 specAccum = 0; \
+		float3 lvSpecAccum = 0; \
+		float3 L0, L1r, L1g, L1b; \
+		DNKW_LIGHTVOLUME_SH(fd.positionWS, L0, L1r, L1g, L1b); \
 		/* Layer 1 */ \
 		if(_EnableSpec1 > 0.5) { \
 			float mask1 = DNKW_SAMPLE_SCALAR_CH(_SpecMask1, _SpecMask1_ST, uvMain, _SpecMask1_Channel); \
@@ -164,6 +204,8 @@ float dnkw_pick_channel(float4 v, int channel)
 				float power1 = pow(2.0, lerp(3.0, 10.0, smooth1)); \
 				float specTerm1 = pow(nh1, power1) * nl1; \
 				specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
+				/* LightVolumeSpecular computes from baseCol1/F0 internally; do not multiply baseCol again */ \
+				lvSpecAccum += overall1 * intensity1 * DNKW_LIGHTVOLUME_SPECULAR(baseCol1, smooth1, LV_F0_METALLIC, N1, V, L0, L1r, L1g, L1b); \
 				if (_SpecUseFresnel1 > 0.5) { \
 					float VdotN1 = saturate(dot(V, N1)); \
 					float rim1 = pow(1.0 - VdotN1, 5.0); \
@@ -187,6 +229,8 @@ float dnkw_pick_channel(float4 v, int channel)
 				float power2 = pow(2.0, lerp(3.0, 10.0, smooth2)); \
 				float specTerm2 = pow(nh2, power2) * nl2; \
 				specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
+				/* LightVolumeSpecular computes from baseCol2/F0 internally; do not multiply baseCol again */ \
+				lvSpecAccum += overall2 * intensity2 * DNKW_LIGHTVOLUME_SPECULAR(baseCol2, smooth2, LV_F0_METALLIC, N2, V, L0, L1r, L1g, L1b); \
 				if (_SpecUseFresnel2 > 0.5) { \
 					float VdotN2 = saturate(dot(V, N2)); \
 					float rim2 = pow(1.0 - VdotN2, 5.0); \
@@ -195,6 +239,7 @@ float dnkw_pick_channel(float4 v, int channel)
 			} \
 		} \
 		fd.col.rgb += specAccum * (fd.lightColor * atten + fd.addLightColor); \
+		fd.col.rgb += lvSpecAccum; \
 	} \
 }
 
