@@ -151,6 +151,7 @@ float dnkw_pick_channel(float4 v, int channel)
 		float3 L = fd.L; \
 		float3 H = normalize(L + V); \
 		float atten = fd.attenuation * fd.shadowmix; \
+		/* Use baseCol directly as F0 via metallic=1 for LightVolumeSpecular */ \
 		const float lvMetallic = 1.0; \
 		float3 specAccum = 0; \
 		float3 lvSpecAccum = 0; \
