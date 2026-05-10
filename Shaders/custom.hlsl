@@ -7,16 +7,20 @@
 	#if __has_include("Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc")
 		#include "Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc"
 		#define DNKW_VRCLV_AVAILABLE 1
+	#else
+		#define DNKW_VRCLV_AVAILABLE 0
 	#endif
+#else
+	#define DNKW_VRCLV_AVAILABLE 0
 #endif
 
-#if !defined(DNKW_VRCLV_AVAILABLE)
+#if !DNKW_VRCLV_AVAILABLE
 	#define DNKW_UNUSED(x) (void)(x)
 	void dnkw_lightvolume_sh_fallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
 	{
 		DNKW_UNUSED(worldPos);
 		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-		/* 0.565 matches LightVolumes.cginc deringing scale for Unity probe L1 coefficients */
+		/* 0.565 reduces SH ringing artefacts in probe L1 terms and matches LightVolumes.cginc fallback */
 		L1r = unity_SHAr.xyz * 0.565f;
 		L1g = unity_SHAg.xyz * 0.565f;
 		L1b = unity_SHAb.xyz * 0.565f;
