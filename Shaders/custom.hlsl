@@ -11,9 +11,10 @@
 #endif
 
 #if !defined(DNKW_VRCLV_AVAILABLE)
+	#define DNKW_UNUSED(x) (void)(x)
 	void dnkw_lightvolume_sh_fallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
 	{
-		/* worldPos is unused in probe fallback; Unity SH probe coefficients are global uniforms */
+		DNKW_UNUSED(worldPos);
 		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
 		/* 0.565 matches LightVolumes.cginc deringing scale for Unity probe L1 coefficients */
 		L1r = unity_SHAr.xyz * 0.565f;
@@ -22,6 +23,15 @@
 	}
 	float3 dnkw_lightvolume_specular_fallback(float3 albedo, float smoothness, float metallic, float3 worldNormal, float3 viewDir, float3 L0, float3 L1r, float3 L1g, float3 L1b)
 	{
+		DNKW_UNUSED(albedo);
+		DNKW_UNUSED(smoothness);
+		DNKW_UNUSED(metallic);
+		DNKW_UNUSED(worldNormal);
+		DNKW_UNUSED(viewDir);
+		DNKW_UNUSED(L0);
+		DNKW_UNUSED(L1r);
+		DNKW_UNUSED(L1g);
+		DNKW_UNUSED(L1b);
 		return 0;
 	}
 	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) dnkw_lightvolume_sh_fallback((worldPos), (L0), (L1r), (L1g), (L1b))
