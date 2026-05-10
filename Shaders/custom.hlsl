@@ -15,10 +15,11 @@
 #if !DNKW_VRCLV_AVAILABLE
 	/* Fallback-only helper for unused parameters in compatibility stubs */
 	#define UNUSED_PARAM(x) (void)(x)
-	/* 0.565 ~= sqrt(1/pi), used in LightVolumes probe deringing for L1 SH terms */
+	/* Matches LightVolumes.cginc LV_SampleLightProbeDering scale for Unity probe L1 terms */
 	#define DNKW_SH_L1_SCALE 0.565f
 	void dnkw_lightVolumeSHFallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
 	{
+		/* Fallback uses unity_SH* probe uniforms (per-object), not worldPos volume sampling */
 		UNUSED_PARAM(worldPos);
 		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
 		/* DNKW_SH_L1_SCALE reduces SH ringing artifacts in probe L1 terms and matches LightVolumes.cginc fallback */
