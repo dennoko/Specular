@@ -1,6 +1,10 @@
 //----------------------------------------------------------------------------------------------------------------------
 // Macro
 
+// VRC Light Volumes (UnityCG must be included first for fallback to light probes)
+#include "UnityCG.cginc"
+#include "Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc"
+
 // Custom variables
 //#define LIL_CUSTOM_PROPERTIES \
 //    float _CustomVariable;
@@ -148,6 +152,9 @@ float dnkw_pick_channel(float4 v, int channel)
 		float3 H = normalize(L + V); \
 		float atten = fd.attenuation * fd.shadowmix; \
 		float3 specAccum = 0; \
+		float3 lvSpecAccum = 0; \
+		float3 L0, L1r, L1g, L1b; \
+		LightVolumeSH(fd.positionWS, L0, L1r, L1g, L1b); \
 		/* Layer 1 */ \
 		if(_EnableSpec1 > 0.5) { \
 			float mask1 = DNKW_SAMPLE_SCALAR_CH(_SpecMask1, _SpecMask1_ST, uvMain, _SpecMask1_Channel); \
@@ -164,6 +171,7 @@ float dnkw_pick_channel(float4 v, int channel)
 				float power1 = pow(2.0, lerp(3.0, 10.0, smooth1)); \
 				float specTerm1 = pow(nh1, power1) * nl1; \
 				specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
+				lvSpecAccum += overall1 * intensity1 * LightVolumeSpecular(baseCol1, smooth1, 1.0, N1, V, L0, L1r, L1g, L1b); \
 				if (_SpecUseFresnel1 > 0.5) { \
 					float VdotN1 = saturate(dot(V, N1)); \
 					float rim1 = pow(1.0 - VdotN1, 5.0); \
@@ -187,6 +195,7 @@ float dnkw_pick_channel(float4 v, int channel)
 				float power2 = pow(2.0, lerp(3.0, 10.0, smooth2)); \
 				float specTerm2 = pow(nh2, power2) * nl2; \
 				specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
+				lvSpecAccum += overall2 * intensity2 * LightVolumeSpecular(baseCol2, smooth2, 1.0, N2, V, L0, L1r, L1g, L1b); \
 				if (_SpecUseFresnel2 > 0.5) { \
 					float VdotN2 = saturate(dot(V, N2)); \
 					float rim2 = pow(1.0 - VdotN2, 5.0); \
@@ -195,6 +204,7 @@ float dnkw_pick_channel(float4 v, int channel)
 			} \
 		} \
 		fd.col.rgb += specAccum * (fd.lightColor * atten + fd.addLightColor); \
+		fd.col.rgb += lvSpecAccum; \
 	} \
 }
 
