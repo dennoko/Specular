@@ -13,7 +13,9 @@
 #if !defined(DNKW_VRCLV_AVAILABLE)
 	void dnkw_lightvolume_sh_fallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
 	{
+		/* worldPos is unused in probe fallback; Unity SH probe coefficients are global uniforms */
 		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+		/* 0.565 matches LightVolumes.cginc deringing scale for Unity probe L1 coefficients */
 		L1r = unity_SHAr.xyz * 0.565f;
 		L1g = unity_SHAg.xyz * 0.565f;
 		L1b = unity_SHAb.xyz * 0.565f;
