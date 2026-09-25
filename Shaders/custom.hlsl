@@ -1,41 +1,6 @@
 //----------------------------------------------------------------------------------------------------------------------
 // Macro
 
-// VRC Light Volumes optional integration
-#include "UnityCG.cginc"
-/* If Packages/red.sim.lightvolumes is installed, uncomment next line to enable VRCLV includes */
-/* #define DNKW_ENABLE_VRCLV 1 */
-#if defined(DNKW_ENABLE_VRCLV)
-	#include "Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc"
-	#define DNKW_VRCLV_AVAILABLE 1
-#else
-	#define DNKW_VRCLV_AVAILABLE 0
-#endif
-
-#if !DNKW_VRCLV_AVAILABLE
-	/* Matches LightVolumes.cginc LV_SampleLightProbeDering scale for Unity probe L1 terms */
-	#define DNKW_SH_L1_SCALE 0.565f
-	void dnkw_lightVolumeSHFallback(float3 worldPos, out float3 L0, out float3 L1r, out float3 L1g, out float3 L1b)
-	{
-		/* Fallback uses unity_SH* probe uniforms (per-object), not worldPos volume sampling */
-		L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-		/* DNKW_SH_L1_SCALE reduces SH ringing artifacts in probe L1 terms and matches LightVolumes.cginc fallback */
-		L1r = unity_SHAr.xyz * DNKW_SH_L1_SCALE;
-		L1g = unity_SHAg.xyz * DNKW_SH_L1_SCALE;
-		L1b = unity_SHAb.xyz * DNKW_SH_L1_SCALE;
-	}
-	float3 dnkw_lightVolumeSpecularFallback(float3 albedo, float smoothness, float metallic, float3 worldNormal, float3 viewDir, float3 L0, float3 L1r, float3 L1g, float3 L1b)
-	{
-		/* Without LightVolumes.cginc we keep prior behavior and avoid approximating a different spec model */
-		return 0;
-	}
-	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) dnkw_lightVolumeSHFallback((worldPos), (L0), (L1r), (L1g), (L1b))
-	#define DNKW_LIGHTVOLUME_SPECULAR(albedo, smoothness, metallic, worldNormal, viewDir, L0, L1r, L1g, L1b) dnkw_lightVolumeSpecularFallback((albedo), (smoothness), (metallic), (worldNormal), (viewDir), (L0), (L1r), (L1g), (L1b))
-#else
-	#define DNKW_LIGHTVOLUME_SH(worldPos, L0, L1r, L1g, L1b) LightVolumeSH((worldPos), (L0), (L1r), (L1g), (L1b))
-	#define DNKW_LIGHTVOLUME_SPECULAR(albedo, smoothness, metallic, worldNormal, viewDir, L0, L1r, L1g, L1b) LightVolumeSpecular((albedo), (smoothness), (metallic), (worldNormal), (viewDir), (L0), (L1r), (L1g), (L1b))
-#endif
-
 // Custom variables
 //#define LIL_CUSTOM_PROPERTIES \
 //    float _CustomVariable;
@@ -76,13 +41,6 @@
 	float4 _SpecSmoothnessMap2_ST; \
 	float _SpecNormalStrength1; \
 	float _SpecNormalStrength2; \
-	/* Fresnel rim */ \
-	float _SpecUseFresnel1; \
-	float _SpecUseFresnel2; \
-	float4 _SpecF0Color1; \
-	float4 _SpecF0Color2; \
-	float _SpecFresnelStrength1; \
-	float _SpecFresnelStrength2; \
 	/* Custom MatCap 1 */ \
 	float _CustomMatCap1_Enable; \
 	float4 _CustomMatCap1_Color; \
@@ -92,6 +50,7 @@
 	int _CustomMatCap1_UseReflection; \
 	int _CustomMatCap1_DisableBackface; \
 	float _CustomMatCap1_EnableLighting; \
+	float _CustomMatCap1_ShadowStrength; \
 	float _CustomMatCap1_Blur; \
 	float _CustomMatCap1_Alpha; \
 	float4 _CustomMatCap1_Tex_ST; \
@@ -164,8 +123,10 @@
 /* channel: 0 R, 1 G, 2 B, 3 A */
 float dnkw_pick_channel(float4 v, int channel)
 {
-	float4 arr = float4(v.r, v.g, v.b, v.a);
-	return arr[channel];
+	if(channel == 1) return v.g;
+	if(channel == 2) return v.b;
+	if(channel == 3) return v.a;
+	return v.r;
 }
 #define DNKW_SAMPLE_SCALAR_CH(tex, st, uv, ch) (dnkw_pick_channel(DNKW_SAMPLE(tex, st, uv), ch))
 
@@ -176,41 +137,33 @@ float dnkw_pick_channel(float4 v, int channel)
 { \
 	if (_EnableSpec1 > 0.5 || _EnableSpec2 > 0.5) { \
 		float2 uvMain = fd.uvMain; \
-		float3 Norig = fd.origN; \
-		float3 Nmap  = fd.N; \
-		float3 V = fd.V; \
-		float3 L = fd.L; \
+		float3 Norig = normalize(fd.origN); \
+		float3 Nmap  = normalize(fd.N); \
+		float3 V = normalize(fd.V); \
+		float3 L = normalize(fd.L); \
 		float3 H = normalize(L + V); \
 		float atten = fd.attenuation * fd.shadowmix; \
-		/* Fixed metallic=1 uses baseCol as F0 (specular color) for LightVolumeSpecular */ \
-		const float LV_F0_METALLIC = 1.0; \
+		float3 lightCol = fd.lightColor; \
 		float3 specAccum = 0; \
-		float3 lvSpecAccum = 0; \
-		float3 L0, L1r, L1g, L1b; \
-		DNKW_LIGHTVOLUME_SH(fd.positionWS, L0, L1r, L1g, L1b); \
 		/* Layer 1 */ \
 		if(_EnableSpec1 > 0.5) { \
 			float mask1 = DNKW_SAMPLE_SCALAR_CH(_SpecMask1, _SpecMask1_ST, uvMain, _SpecMask1_Channel); \
 			float noise1 = DNKW_SAMPLE_SCALAR_CH(_SpecNoiseTex1, _SpecNoiseTex1_ST, uvMain, _SpecNoiseTex1_Channel); \
 			float overall1 = saturate(mask1 * noise1); \
 			if (overall1 > 0.0001) { \
-				float s1 = _SpecNormalStrength1; \
+				float s1 = clamp(_SpecNormalStrength1, 0.0, 3.0); \
 				float3 N1 = normalize(lerp(Norig, Nmap, s1)); \
 				float nl1 = saturate(dot(N1, L)); \
 				float nh1 = saturate(dot(N1, H)); \
-				float3 baseCol1 = (_UseSpecColorMap1 > 0.5 ? DNKW_SAMPLE_COLOR(_SpecColorMap1, _SpecColorMap1_ST, uvMain) : float3(1,1,1)) * _SpecColor1.rgb; \
-				float intensity1 = _SpecIntensity1 * (_UseSpecIntensityMap1 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap1, _SpecIntensityMap1_ST, uvMain, _SpecIntensityMap1_Channel) : 1.0); \
-				float smooth1 = saturate(_SpecSmoothness1 * (_UseSpecSmoothnessMap1 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap1, _SpecSmoothnessMap1_ST, uvMain, _SpecSmoothnessMap1_Channel) : 1.0)); \
-				float power1 = pow(2.0, lerp(3.0, 10.0, smooth1)); \
+				float3 colTex1 = DNKW_SAMPLE_COLOR(_SpecColorMap1, _SpecColorMap1_ST, uvMain); \
+				float mapI1 = DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap1, _SpecIntensityMap1_ST, uvMain, _SpecIntensityMap1_Channel); \
+				float mapS1 = DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap1, _SpecSmoothnessMap1_ST, uvMain, _SpecSmoothnessMap1_Channel); \
+				float3 baseCol1 = (_UseSpecColorMap1 > 0.5 ? colTex1 : float3(1,1,1)) * _SpecColor1.rgb; \
+				float intensity1 = _SpecIntensity1 * (_UseSpecIntensityMap1 > 0.5 ? mapI1 : 1.0); \
+				float smooth1 = saturate(_SpecSmoothness1 * (_UseSpecSmoothnessMap1 > 0.5 ? mapS1 : 1.0)); \
+				float power1 = lerp(8.0, 1024.0, smooth1); \
 				float specTerm1 = pow(nh1, power1) * nl1; \
 				specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
-				/* LightVolumeSpecular computes from baseCol1/F0 internally; do not multiply baseCol again */ \
-				lvSpecAccum += overall1 * intensity1 * DNKW_LIGHTVOLUME_SPECULAR(baseCol1, smooth1, LV_F0_METALLIC, N1, V, L0, L1r, L1g, L1b); \
-				if (_SpecUseFresnel1 > 0.5) { \
-					float VdotN1 = saturate(dot(V, N1)); \
-					float rim1 = pow(1.0 - VdotN1, 5.0); \
-					specAccum += overall1 * _SpecF0Color1.rgb * _SpecFresnelStrength1 * rim1; \
-				} \
 			} \
 		} \
 		/* Layer 2 */ \
@@ -219,27 +172,23 @@ float dnkw_pick_channel(float4 v, int channel)
 			float noise2 = DNKW_SAMPLE_SCALAR_CH(_SpecNoiseTex2, _SpecNoiseTex2_ST, uvMain, _SpecNoiseTex2_Channel); \
 			float overall2 = saturate(mask2 * noise2); \
 			if (overall2 > 0.0001) { \
-				float s2 = _SpecNormalStrength2; \
+				float s2 = clamp(_SpecNormalStrength2, 0.0, 3.0); \
 				float3 N2 = normalize(lerp(Norig, Nmap, s2)); \
 				float nl2 = saturate(dot(N2, L)); \
 				float nh2 = saturate(dot(N2, H)); \
-				float3 baseCol2 = (_UseSpecColorMap2 > 0.5 ? DNKW_SAMPLE_COLOR(_SpecColorMap2, _SpecColorMap2_ST, uvMain) : float3(1,1,1)) * _SpecColor2.rgb; \
-				float intensity2 = _SpecIntensity2 * (_UseSpecIntensityMap2 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap2, _SpecIntensityMap2_ST, uvMain, _SpecIntensityMap2_Channel) : 1.0); \
-				float smooth2 = saturate(_SpecSmoothness2 * (_UseSpecSmoothnessMap2 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap2, _SpecSmoothnessMap2_ST, uvMain, _SpecSmoothnessMap2_Channel) : 1.0)); \
-				float power2 = pow(2.0, lerp(3.0, 10.0, smooth2)); \
+				float3 colTex2 = DNKW_SAMPLE_COLOR(_SpecColorMap2, _SpecColorMap2_ST, uvMain); \
+				float mapI2 = DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap2, _SpecIntensityMap2_ST, uvMain, _SpecIntensityMap2_Channel); \
+				float mapS2 = DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap2, _SpecSmoothnessMap2_ST, uvMain, _SpecSmoothnessMap2_Channel); \
+				float3 baseCol2 = (_UseSpecColorMap2 > 0.5 ? colTex2 : float3(1,1,1)) * _SpecColor2.rgb; \
+				float intensity2 = _SpecIntensity2 * (_UseSpecIntensityMap2 > 0.5 ? mapI2 : 1.0); \
+				float smooth2 = saturate(_SpecSmoothness2 * (_UseSpecSmoothnessMap2 > 0.5 ? mapS2 : 1.0)); \
+				float power2 = lerp(8.0, 1024.0, smooth2); \
 				float specTerm2 = pow(nh2, power2) * nl2; \
 				specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
-				/* LightVolumeSpecular computes from baseCol2/F0 internally; do not multiply baseCol again */ \
-				lvSpecAccum += overall2 * intensity2 * DNKW_LIGHTVOLUME_SPECULAR(baseCol2, smooth2, LV_F0_METALLIC, N2, V, L0, L1r, L1g, L1b); \
-				if (_SpecUseFresnel2 > 0.5) { \
-					float VdotN2 = saturate(dot(V, N2)); \
-					float rim2 = pow(1.0 - VdotN2, 5.0); \
-					specAccum += overall2 * _SpecF0Color2.rgb * _SpecFresnelStrength2 * rim2; \
-				} \
 			} \
 		} \
-		fd.col.rgb += specAccum * (fd.lightColor * atten + fd.addLightColor); \
-		fd.col.rgb += lvSpecAccum; \
+		float3 specFinal = specAccum * lightCol * atten; \
+		fd.col.rgb += specFinal; \
 	} \
 }
 
@@ -270,7 +219,7 @@ float dnkw_pick_channel(float4 v, int channel)
 		/* Improved Blend Logic: Apply Mask via Lerp */ \
 		float3 targetColor = fd.col.rgb; \
 		int blend1 = _CustomMatCap1_Blend; \
-		float shadowFac = fd.attenuation * fd.shadowmix; \
+		float shadowFac = lerp(1.0, fd.attenuation * fd.shadowmix, _CustomMatCap1_ShadowStrength); \
 		float3 lightFac = lerp(float3(1,1,1), fd.lightColor, _CustomMatCap1_EnableLighting); \
 		mcColor *= shadowFac * lightFac; \
 		if (blend1 == 0) targetColor += mcColor; /* Add */ \

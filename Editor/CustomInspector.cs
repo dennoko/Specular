@@ -1,5 +1,4 @@
 #if UNITY_EDITOR
-using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -32,9 +31,6 @@ namespace lilToon
         private MaterialProperty _SpecSmoothnessMap1;
         private MaterialProperty _SpecSmoothnessMap1_Channel;
         private MaterialProperty _SpecNormalStrength1;
-        private MaterialProperty _SpecUseFresnel1;
-        private MaterialProperty _SpecF0Color1;
-        private MaterialProperty _SpecFresnelStrength1;
 
         // 2nd layer
         private MaterialProperty _EnableSpec2;
@@ -50,9 +46,6 @@ namespace lilToon
         private MaterialProperty _SpecSmoothnessMap2;
         private MaterialProperty _SpecSmoothnessMap2_Channel;
         private MaterialProperty _SpecNormalStrength2;
-        private MaterialProperty _SpecUseFresnel2;
-        private MaterialProperty _SpecF0Color2;
-        private MaterialProperty _SpecFresnelStrength2;
 
         private static bool isShowCustomProperties;
         private static bool isShowSpec1;
@@ -71,6 +64,7 @@ namespace lilToon
         private MaterialProperty _CustomMatCap1_UseReflection;
         private MaterialProperty _CustomMatCap1_DisableBackface;
         private MaterialProperty _CustomMatCap1_EnableLighting;
+        private MaterialProperty _CustomMatCap1_ShadowStrength;
         private MaterialProperty _CustomMatCap1_Blur;
         private MaterialProperty _CustomMatCap1_Alpha;
 
@@ -112,9 +106,6 @@ namespace lilToon
             _SpecSmoothnessMap1     = FindProperty("_SpecSmoothnessMap1", props);
             _SpecSmoothnessMap1_Channel = FindProperty("_SpecSmoothnessMap1_Channel", props);
             _SpecNormalStrength1    = FindProperty("_SpecNormalStrength1", props);
-            _SpecUseFresnel1        = FindProperty("_SpecUseFresnel1", props);
-            _SpecF0Color1           = FindProperty("_SpecF0Color1", props);
-            _SpecFresnelStrength1   = FindProperty("_SpecFresnelStrength1", props);
 
             // 2nd layer
             _EnableSpec2            = FindProperty("_EnableSpec2", props);
@@ -130,10 +121,7 @@ namespace lilToon
             _SpecSmoothnessMap2     = FindProperty("_SpecSmoothnessMap2", props);
             _SpecSmoothnessMap2_Channel = FindProperty("_SpecSmoothnessMap2_Channel", props);
             _SpecNormalStrength2    = FindProperty("_SpecNormalStrength2", props);
-            _SpecUseFresnel2        = FindProperty("_SpecUseFresnel2", props);
-            _SpecF0Color2           = FindProperty("_SpecF0Color2", props);
-            _SpecFresnelStrength2   = FindProperty("_SpecFresnelStrength2", props);
-
+            
             // Custom MatCap 1
             _CustomMatCap1_Enable           = FindProperty("_CustomMatCap1_Enable", props);
             _CustomMatCap1_Color            = FindProperty("_CustomMatCap1_Color", props);
@@ -144,6 +132,7 @@ namespace lilToon
             _CustomMatCap1_UseReflection    = FindProperty("_CustomMatCap1_UseReflection", props);
             _CustomMatCap1_DisableBackface  = FindProperty("_CustomMatCap1_DisableBackface", props);
             _CustomMatCap1_EnableLighting   = FindProperty("_CustomMatCap1_EnableLighting", props);
+            _CustomMatCap1_ShadowStrength   = FindProperty("_CustomMatCap1_ShadowStrength", props);
             _CustomMatCap1_Blur             = FindProperty("_CustomMatCap1_Blur", props);
             _CustomMatCap1_Alpha            = FindProperty("_CustomMatCap1_Alpha", props);
             
@@ -168,6 +157,8 @@ namespace lilToon
                 EditorGUILayout.BeginVertical(boxOuter);
 //                EditorGUILayout.LabelField(GetLoc("dennoko_extension"), customToggleFont);
                 EditorGUILayout.BeginVertical(boxInnerHalf);
+
+                // moved mask/noise into each layer foldout
 
                 // Specular 1st
                 isShowSpec1 = Foldout("Specular1st", "Specular 1st parameters", isShowSpec1);
@@ -225,14 +216,6 @@ namespace lilToon
 
                     // Normal Strength 1
                     m_MaterialEditor.ShaderProperty(_SpecNormalStrength1, new GUIContent("ノーマル強度", "1層目のノーマルマップ強度。0で無効、1でそのまま、2以上で傾きを強くします。値域が破綻しないよう内部で補間します。"));
-
-                    // Fresnel rim 1
-                    m_MaterialEditor.ShaderProperty(_SpecUseFresnel1, new GUIContent("フレネルリム有効化", "視線に対して斜めになるシルエット端にリムハイライトを追加します。レザーの端の光沢感に有効です。"));
-                    if (_SpecUseFresnel1.floatValue > 0.5f)
-                    {
-                        DrawColorWithHex(_SpecF0Color1, "リムカラー", "シルエット端に加算するリムハイライトの色。白=ニュートラル、色をつけると有色リムになります。");
-                        m_MaterialEditor.ShaderProperty(_SpecFresnelStrength1, new GUIContent("リム強度", "フレネルリムの強さ。大きいほど端が明るくなります。"));
-                    }
 
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.EndVertical();
@@ -295,14 +278,6 @@ namespace lilToon
                     // Normal Strength 2
                     m_MaterialEditor.ShaderProperty(_SpecNormalStrength2, new GUIContent("ノーマル強度", "2層目のノーマルマップ強度。0で無効、1でそのまま、2以上で傾きを強くします。値域が破綻しないよう内部で補間します。"));
 
-                    // Fresnel rim 2
-                    m_MaterialEditor.ShaderProperty(_SpecUseFresnel2, new GUIContent("フレネルリム有効化", "視線に対して斜めになるシルエット端にリムハイライトを追加します。レザーの端の光沢感に有効です。"));
-                    if (_SpecUseFresnel2.floatValue > 0.5f)
-                    {
-                        DrawColorWithHex(_SpecF0Color2, "リムカラー", "シルエット端に加算するリムハイライトの色。白=ニュートラル、色をつけると有色リムになります。");
-                        m_MaterialEditor.ShaderProperty(_SpecFresnelStrength2, new GUIContent("リム強度", "フレネルリムの強さ。大きいほど端が明るくなります。"));
-                    }
-
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.EndVertical();
                 }
@@ -317,7 +292,7 @@ namespace lilToon
                     bool matCap1Valid = _CustomMatCap1_Enable != null && _CustomMatCap1_Tex != null && _CustomMatCap1_Color != null &&
                                         _CustomMatCap1_Blend != null && _CustomMatCap1_Blur != null && _CustomMatCap1_Mask != null &&
                                         _CustomMatCap1_BumpScale != null && _CustomMatCap1_UseReflection != null && _CustomMatCap1_DisableBackface != null &&
-                                        _CustomMatCap1_EnableLighting != null &&
+                                        _CustomMatCap1_EnableLighting != null && _CustomMatCap1_ShadowStrength != null &&
                                         _CustomMatCap1_Alpha != null;
 
                     if (matCap1Valid)
@@ -354,7 +329,8 @@ namespace lilToon
                         m_MaterialEditor.ShaderProperty(_CustomMatCap1_DisableBackface, new GUIContent("Disable on Backface", "If enabled, the MatCap will not be applied to backfaces."));
 
                         m_MaterialEditor.ShaderProperty(_CustomMatCap1_EnableLighting, new GUIContent("Enable Lighting"));
-
+                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_ShadowStrength, new GUIContent("Shadow Strength"));
+                        
                         EditorGUILayout.EndVertical();
                     }
                     else
@@ -480,63 +456,6 @@ namespace lilToon
             ltsto       = Shader.Find("Hidden/" + shaderName + "/TransparentOutline");
 
             // Do NOT assign OnePass/TwoPass Transparent or Lite/Multi/Optional variants to hide them from the UI
-        }
-
-        // --------------------------------------------------
-        // Schema v1 migration: linear smoothness → log scale
-        // pow(2, lerp(3,10,s)) replaces lerp(8,1024,s)
-        // Conversion: s_new = (log2(8 + 1016*s_old) - 3) / 7
-        // --------------------------------------------------
-
-        [UnityEditor.Callbacks.DidReloadScripts]
-        static void OnScriptsReloaded()
-        {
-            EditorApplication.delayCall += MigrateAllMaterials;
-        }
-
-        [MenuItem("Tools/dennoko/Migrate Specular Materials")]
-        static void MigrateAllMaterials()
-        {
-            string[] guids = AssetDatabase.FindAssets("t:Material");
-            int count = 0;
-            foreach (string guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-                if (mat == null || mat.shader == null) continue;
-                if (!mat.shader.name.Contains(shaderName)) continue;
-                if (MigrateMaterial(mat)) count++;
-            }
-            if (count > 0)
-            {
-                AssetDatabase.SaveAssets();
-                Debug.Log($"[dennoko Specular] Migrated {count} material(s) to schema v1 (log smoothness scale).");
-            }
-        }
-
-        // Returns true if the material was migrated.
-        static bool MigrateMaterial(Material mat)
-        {
-            // Detect old materials: _SchemaVersion is absent from the .mat file (Unity returns shader default 0)
-            // We distinguish by reading the raw YAML — old files won't contain "_SchemaVersion"
-            string path = AssetDatabase.GetAssetPath(mat);
-            if (!string.IsNullOrEmpty(path) && File.Exists(path))
-            {
-                string yaml = File.ReadAllText(path);
-                if (yaml.Contains("_SchemaVersion")) return false; // already written → skip
-            }
-            else if ((int)mat.GetFloat("_SchemaVersion") >= 1)
-            {
-                return false;
-            }
-
-            float s1 = Mathf.Clamp01(mat.GetFloat("_SpecSmoothness1"));
-            float s2 = Mathf.Clamp01(mat.GetFloat("_SpecSmoothness2"));
-            mat.SetFloat("_SpecSmoothness1", Mathf.Clamp01((Mathf.Log(Mathf.Max(8f + 1016f * s1, 1e-6f), 2f) - 3f) / 7f));
-            mat.SetFloat("_SpecSmoothness2", Mathf.Clamp01((Mathf.Log(Mathf.Max(8f + 1016f * s2, 1e-6f), 2f) - 3f) / 7f));
-            mat.SetFloat("_SchemaVersion", 1f);
-            EditorUtility.SetDirty(mat);
-            return true;
         }
 
         // You can create a menu like this
