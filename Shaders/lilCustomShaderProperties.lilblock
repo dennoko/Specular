@@ -51,16 +51,6 @@
                 // Normal strength per layer
                                 _SpecNormalStrength1          ("Normal Strength 1", Range(0,3)) = 1
                                 _SpecNormalStrength2          ("Normal Strength 2", Range(0,3)) = 1
-
-                // Fresnel rim
-                [lilToggle]     _SpecUseFresnel1              ("Use Fresnel Rim 1", Float) = 0
-                                _SpecF0Color1                 ("Fresnel Rim Color 1", Color) = (1,1,1,1)
-                                _SpecFresnelStrength1         ("Fresnel Rim Strength 1", Range(0,5)) = 1
-                [lilToggle]     _SpecUseFresnel2              ("Use Fresnel Rim 2", Float) = 0
-                                _SpecF0Color2                 ("Fresnel Rim Color 2", Color) = (1,1,1,1)
-                                _SpecFresnelStrength2         ("Fresnel Rim Strength 2", Range(0,5)) = 1
-
-                [HideInInspector] _SchemaVersion              ("Schema Version", Float) = 0
         //----------------------------------------------------------------------------------------------------------------------
         // Custom MatCap 1
                 [lilToggle]     _CustomMatCap1_Enable         ("Enable MatCap 1", Float) = 0
@@ -73,5 +63,6 @@
                                 [lilToggle]     _CustomMatCap1_UseReflection  ("Use Reflection", Int) = 0
                                 [lilToggle]     _CustomMatCap1_DisableBackface("Disable on Backface", Int) = 0
                                 _CustomMatCap1_EnableLighting ("Enable Lighting", Range(0,1)) = 1.0
+                                _CustomMatCap1_ShadowStrength ("Shadow Strength", Range(0,1)) = 0.0
                                 _CustomMatCap1_Blur           ("Blur", Range(0,1)) = 0.0
                                 _CustomMatCap1_Alpha          ("Opacity", Range(0,1)) = 1.0
