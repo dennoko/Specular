@@ -1,5 +1,5 @@
 #if UNITY_EDITOR
-using System.Linq;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -25,9 +25,11 @@ namespace lilToon
         private MaterialProperty _SpecColorMap1;
         private MaterialProperty _SpecIntensity1;
         private MaterialProperty _UseSpecIntensityMap1;
+        private MaterialProperty _SpecIntensityMap1;
         private MaterialProperty _SpecIntensityMap1_Channel;
         private MaterialProperty _SpecSmoothness1;
         private MaterialProperty _UseSpecSmoothnessMap1;
+        private MaterialProperty _SpecSmoothnessMap1;
         private MaterialProperty _SpecSmoothnessMap1_Channel;
         private MaterialProperty _SpecNormalStrength1;
         private MaterialProperty _SpecUseFresnel1;
@@ -41,9 +43,11 @@ namespace lilToon
         private MaterialProperty _SpecColorMap2;
         private MaterialProperty _SpecIntensity2;
         private MaterialProperty _UseSpecIntensityMap2;
+        private MaterialProperty _SpecIntensityMap2;
         private MaterialProperty _SpecIntensityMap2_Channel;
         private MaterialProperty _SpecSmoothness2;
         private MaterialProperty _UseSpecSmoothnessMap2;
+        private MaterialProperty _SpecSmoothnessMap2;
         private MaterialProperty _SpecSmoothnessMap2_Channel;
         private MaterialProperty _SpecNormalStrength2;
         private MaterialProperty _SpecUseFresnel2;
@@ -77,19 +81,6 @@ namespace lilToon
             finally
             {
                 GUI.backgroundColor = previousBackgroundColor;
-            }
-        }
-
-        private void DrawLegacyMapNotice()
-        {
-            Material[] legacyMats = m_MaterialEditor.targets.OfType<Material>().Where(DennokoSpecularMigration.NeedsBake).ToArray();
-            if (legacyMats.Length == 0) return;
-
-            EditorGUILayout.HelpBox("旧バージョンの強度マップ/スムースネスマップが設定されています。現在のバージョンでは Mask テクスチャのチャンネルから読むため、このままでは見た目が変わります。\n下のボタンで、Mask・強度・スムースネスを R/G/B にパックしたテクスチャをマテリアルと同じフォルダに作成し、Mask に設定します。", MessageType.Warning);
-            if (GUILayout.Button("Mask にパックして変換"))
-            {
-                // Asset creation/import must not run inside OnGUI.
-                EditorApplication.delayCall += () => DennokoSpecularMigration.BakeMaterials(legacyMats);
             }
         }
 
@@ -155,9 +146,11 @@ namespace lilToon
             _SpecColorMap1          = FindProperty("_SpecColorMap1", props);
             _SpecIntensity1         = FindProperty("_SpecIntensity1", props);
             _UseSpecIntensityMap1   = FindProperty("_UseSpecIntensityMap1", props);
+            _SpecIntensityMap1      = FindProperty("_SpecIntensityMap1", props);
             _SpecIntensityMap1_Channel = FindProperty("_SpecIntensityMap1_Channel", props);
             _SpecSmoothness1        = FindProperty("_SpecSmoothness1", props);
             _UseSpecSmoothnessMap1  = FindProperty("_UseSpecSmoothnessMap1", props);
+            _SpecSmoothnessMap1     = FindProperty("_SpecSmoothnessMap1", props);
             _SpecSmoothnessMap1_Channel = FindProperty("_SpecSmoothnessMap1_Channel", props);
             _SpecNormalStrength1    = FindProperty("_SpecNormalStrength1", props);
             _SpecUseFresnel1        = FindProperty("_SpecUseFresnel1", props);
@@ -171,9 +164,11 @@ namespace lilToon
             _SpecColorMap2          = FindProperty("_SpecColorMap2", props);
             _SpecIntensity2         = FindProperty("_SpecIntensity2", props);
             _UseSpecIntensityMap2   = FindProperty("_UseSpecIntensityMap2", props);
+            _SpecIntensityMap2      = FindProperty("_SpecIntensityMap2", props);
             _SpecIntensityMap2_Channel = FindProperty("_SpecIntensityMap2_Channel", props);
             _SpecSmoothness2        = FindProperty("_SpecSmoothness2", props);
             _UseSpecSmoothnessMap2  = FindProperty("_UseSpecSmoothnessMap2", props);
+            _SpecSmoothnessMap2     = FindProperty("_SpecSmoothnessMap2", props);
             _SpecSmoothnessMap2_Channel = FindProperty("_SpecSmoothnessMap2_Channel", props);
             _SpecNormalStrength2    = FindProperty("_SpecNormalStrength2", props);
             _SpecUseFresnel2        = FindProperty("_SpecUseFresnel2", props);
@@ -209,7 +204,6 @@ namespace lilToon
             // customToggleFont label for box
 
             DrawRefreshShadersButton();
-            DrawLegacyMapNotice();
             EditorGUILayout.Space();
 
             // Specular 1st
@@ -243,20 +237,24 @@ namespace lilToon
 
                 lilEditorGUI.DrawLine();
                 EditorGUILayout.LabelField("強度・スムースネス設定", boldLabel);
-                m_MaterialEditor.ShaderProperty(_UseSpecIntensityMap1, new GUIContent("強度マップ使用", "スペキュラー強度にマスクテクスチャのチャンネルを使用します(タイリングはマスクと共通)。OFFのときは下のスライダー値を使用します。"));
+                m_MaterialEditor.ShaderProperty(_UseSpecIntensityMap1, new GUIContent("強度マップ使用", "スペキュラー強度にテクスチャのチャンネルを使用します。OFFのときは下のスライダー値を使用します。"));
                 if(_UseSpecIntensityMap1.floatValue > 0.5f)
                 {
-                    DrawChannelPopup(_SpecIntensityMap1_Channel, "Intensity Channel", "Mask 1 のうち強度に使用するチャンネル (R/G/B/A)");
+                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Intensity Map", "強度マップ。使用チャンネルを選択できます。"), _SpecIntensityMap1);
+                    m_MaterialEditor.TextureScaleOffsetProperty(_SpecIntensityMap1);
+                    DrawChannelPopup(_SpecIntensityMap1_Channel, "Intensity Channel", "強度で使用するチャンネル (R/G/B/A)");
                 }
                 else
                 {
                     m_MaterialEditor.ShaderProperty(_SpecIntensity1, new GUIContent("強度", "スペキュラーの明るさ/寄与度。"));
                 }
 
-                m_MaterialEditor.ShaderProperty(_UseSpecSmoothnessMap1, new GUIContent("スムースネスマップ使用", "ハイライトの鋭さ(スムースネス)にマスクテクスチャのチャンネルを使用します(タイリングはマスクと共通)。OFFのときは下のスライダー値を使用します。"));
+                m_MaterialEditor.ShaderProperty(_UseSpecSmoothnessMap1, new GUIContent("スムースネスマップ使用", "ハイライトの鋭さ(スムースネス)にテクスチャのチャンネルを使用します。OFFのときは下のスライダー値を使用します。"));
                 if(_UseSpecSmoothnessMap1.floatValue > 0.5f)
                 {
-                    DrawChannelPopup(_SpecSmoothnessMap1_Channel, "Smoothness Channel", "Mask 1 のうちスムースネスに使用するチャンネル (R/G/B/A)");
+                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Smoothness Map", "スムースネスマップ。使用チャンネルを選択できます。"), _SpecSmoothnessMap1);
+                    m_MaterialEditor.TextureScaleOffsetProperty(_SpecSmoothnessMap1);
+                    DrawChannelPopup(_SpecSmoothnessMap1_Channel, "Smoothness Channel", "スムースネスで使用するチャンネル (R/G/B/A)");
                 }
                 else
                 {
@@ -309,20 +307,24 @@ namespace lilToon
 
                 lilEditorGUI.DrawLine();
                 EditorGUILayout.LabelField("強度・スムースネス設定", boldLabel);
-                m_MaterialEditor.ShaderProperty(_UseSpecIntensityMap2, new GUIContent("強度マップ使用", "スペキュラー強度にマスクテクスチャのチャンネルを使用します(タイリングはマスクと共通)。OFFのときは下のスライダー値を使用します。"));
+                m_MaterialEditor.ShaderProperty(_UseSpecIntensityMap2, new GUIContent("強度マップ使用", "スペキュラー強度にテクスチャのチャンネルを使用します。OFFのときは下のスライダー値を使用します。"));
                 if(_UseSpecIntensityMap2.floatValue > 0.5f)
                 {
-                    DrawChannelPopup(_SpecIntensityMap2_Channel, "Intensity Channel", "Mask 2 のうち強度に使用するチャンネル (R/G/B/A)");
+                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Intensity Map (R)", "強度マップ。使用チャンネルを選択できます。"), _SpecIntensityMap2);
+                    m_MaterialEditor.TextureScaleOffsetProperty(_SpecIntensityMap2);
+                    DrawChannelPopup(_SpecIntensityMap2_Channel, "Intensity Channel", "強度で使用するチャンネル (R/G/B/A)");
                 }
                 else
                 {
                     m_MaterialEditor.ShaderProperty(_SpecIntensity2, new GUIContent("強度", "スペキュラーの明るさ/寄与度。"));
                 }
 
-                m_MaterialEditor.ShaderProperty(_UseSpecSmoothnessMap2, new GUIContent("スムースネスマップ使用", "ハイライトの鋭さ(スムースネス)にマスクテクスチャのチャンネルを使用します(タイリングはマスクと共通)。OFFのときは下のスライダー値を使用します。"));
+                m_MaterialEditor.ShaderProperty(_UseSpecSmoothnessMap2, new GUIContent("スムースネスマップ使用", "ハイライトの鋭さ(スムースネス)にテクスチャのチャンネルを使用します。OFFのときは下のスライダー値を使用します。"));
                 if(_UseSpecSmoothnessMap2.floatValue > 0.5f)
                 {
-                    DrawChannelPopup(_SpecSmoothnessMap2_Channel, "Smoothness Channel", "Mask 2 のうちスムースネスに使用するチャンネル (R/G/B/A)");
+                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Smoothness Map (R)", "スムースネスマップ。使用チャンネルを選択できます。"), _SpecSmoothnessMap2);
+                    m_MaterialEditor.TextureScaleOffsetProperty(_SpecSmoothnessMap2);
+                    DrawChannelPopup(_SpecSmoothnessMap2_Channel, "Smoothness Channel", "スムースネスで使用するチャンネル (R/G/B/A)");
                 }
                 else
                 {
@@ -513,6 +515,63 @@ namespace lilToon
             ltsto       = Shader.Find("Hidden/" + shaderName + "/TransparentOutline");
 
             // Do NOT assign OnePass/TwoPass Transparent or Lite/Multi/Optional variants to hide them from the UI
+        }
+
+        // --------------------------------------------------
+        // Schema v1 migration: linear smoothness → log scale
+        // pow(2, lerp(3,10,s)) replaces lerp(8,1024,s)
+        // Conversion: s_new = (log2(8 + 1016*s_old) - 3) / 7
+        // --------------------------------------------------
+
+        [UnityEditor.Callbacks.DidReloadScripts]
+        static void OnScriptsReloaded()
+        {
+            EditorApplication.delayCall += MigrateAllMaterials;
+        }
+
+        [MenuItem("Tools/dennoko/Migrate Specular Materials")]
+        static void MigrateAllMaterials()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:Material");
+            int count = 0;
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (mat == null || mat.shader == null) continue;
+                if (!mat.shader.name.Contains(shaderName)) continue;
+                if (MigrateMaterial(mat)) count++;
+            }
+            if (count > 0)
+            {
+                AssetDatabase.SaveAssets();
+                Debug.Log($"[dennoko Specular] Migrated {count} material(s) to schema v1 (log smoothness scale).");
+            }
+        }
+
+        // Returns true if the material was migrated.
+        static bool MigrateMaterial(Material mat)
+        {
+            // Detect old materials: _SchemaVersion is absent from the .mat file (Unity returns shader default 0)
+            // We distinguish by reading the raw YAML — old files won't contain "_SchemaVersion"
+            string path = AssetDatabase.GetAssetPath(mat);
+            if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            {
+                string yaml = File.ReadAllText(path);
+                if (yaml.Contains("_SchemaVersion")) return false; // already written → skip
+            }
+            else if ((int)mat.GetFloat("_SchemaVersion") >= 1)
+            {
+                return false;
+            }
+
+            float s1 = Mathf.Clamp01(mat.GetFloat("_SpecSmoothness1"));
+            float s2 = Mathf.Clamp01(mat.GetFloat("_SpecSmoothness2"));
+            mat.SetFloat("_SpecSmoothness1", Mathf.Clamp01((Mathf.Log(Mathf.Max(8f + 1016f * s1, 1e-6f), 2f) - 3f) / 7f));
+            mat.SetFloat("_SpecSmoothness2", Mathf.Clamp01((Mathf.Log(Mathf.Max(8f + 1016f * s2, 1e-6f), 2f) - 3f) / 7f));
+            mat.SetFloat("_SchemaVersion", 1f);
+            EditorUtility.SetDirty(mat);
+            return true;
         }
 
         // You can create a menu like this
