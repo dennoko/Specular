@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -81,6 +82,29 @@ namespace lilToon
             finally
             {
                 GUI.backgroundColor = previousBackgroundColor;
+            }
+        }
+
+        private void DrawMaskArrayStatus()
+        {
+            // Mask slots are packed into one Texture2DArray; rebuild it after the current GUI pass when they change.
+            bool stale = false;
+            foreach (Material mat in m_MaterialEditor.targets.OfType<Material>())
+            {
+                DennokoMaskArrayBuilder.QueueRebuildIfStale(mat);
+                if (!DennokoMaskArrayBuilder.IsUpToDate(mat)) stale = true;
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField(new GUIContent(stale ? "マスク配列: 更新中…" : "マスク配列: 最新",
+                    "マスク・ノイズ・強度・スムースネス・MatCapマスクのテクスチャは、自動で1枚のテクスチャ配列にまとめて使用されます(テクスチャ数の上限対策)。"), EditorStyles.miniLabel);
+                if (GUILayout.Button(new GUIContent("再生成", "マスク配列を強制的に作り直します。"), EditorStyles.miniButton, GUILayout.Width(60)))
+                {
+                    Material[] mats = m_MaterialEditor.targets.OfType<Material>().ToArray();
+                    // Asset creation must not run inside OnGUI.
+                    EditorApplication.delayCall += () => { foreach (Material mat in mats) DennokoMaskArrayBuilder.Build(mat); };
+                }
             }
         }
 
@@ -204,6 +228,7 @@ namespace lilToon
             // customToggleFont label for box
 
             DrawRefreshShadersButton();
+            DrawMaskArrayStatus();
             EditorGUILayout.Space();
 
             // Specular 1st

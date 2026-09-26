@@ -30,6 +30,8 @@ This project uses lilToon's **custom shader insert system**. Shaders are not sta
 | [Shaders/lilCustomShaderProperties.lilblock](Shaders/lilCustomShaderProperties.lilblock) | All 68 shader property declarations |
 | [Shaders/lilCustomShaderDatas.lilblock](Shaders/lilCustomShaderDatas.lilblock) | Shader name and editor class binding |
 | [Editor/CustomInspector.cs](Editor/CustomInspector.cs) | Material inspector UI (extends `lilToonInspector`) |
+| [Editor/MaskArrayBuilder.cs](Editor/MaskArrayBuilder.cs) | Packs scalar mask slots into `_DnkwMaskArray` (Texture2DArray, BC4) |
+| [Editor/MaskArrayBuildHook.cs](Editor/MaskArrayBuildHook.cs) | VRCSDK upload hook: strips 2D mask sources from build copies |
 | [Editor/dennoko_specularex.asmdef](Editor/dennoko_specularex.asmdef) | Editor-only assembly, references `lilToon.Editor` |
 
 ### HLSL Implementation (`custom.hlsl`)
