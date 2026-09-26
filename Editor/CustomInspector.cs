@@ -25,11 +25,9 @@ namespace lilToon
         private MaterialProperty _SpecColorMap1;
         private MaterialProperty _SpecIntensity1;
         private MaterialProperty _UseSpecIntensityMap1;
-        private MaterialProperty _SpecIntensityMap1;
         private MaterialProperty _SpecIntensityMap1_Channel;
         private MaterialProperty _SpecSmoothness1;
         private MaterialProperty _UseSpecSmoothnessMap1;
-        private MaterialProperty _SpecSmoothnessMap1;
         private MaterialProperty _SpecSmoothnessMap1_Channel;
         private MaterialProperty _SpecNormalStrength1;
         private MaterialProperty _SpecUseFresnel1;
@@ -43,21 +41,60 @@ namespace lilToon
         private MaterialProperty _SpecColorMap2;
         private MaterialProperty _SpecIntensity2;
         private MaterialProperty _UseSpecIntensityMap2;
-        private MaterialProperty _SpecIntensityMap2;
         private MaterialProperty _SpecIntensityMap2_Channel;
         private MaterialProperty _SpecSmoothness2;
         private MaterialProperty _UseSpecSmoothnessMap2;
-        private MaterialProperty _SpecSmoothnessMap2;
         private MaterialProperty _SpecSmoothnessMap2_Channel;
         private MaterialProperty _SpecNormalStrength2;
         private MaterialProperty _SpecUseFresnel2;
         private MaterialProperty _SpecF0Color2;
         private MaterialProperty _SpecFresnelStrength2;
 
-        private static bool isShowCustomProperties;
         private static bool isShowSpec1;
         private static bool isShowSpec2;
         private const string shaderName = "dennoko_specularex";
+        private const string refreshShadersMenuPath = "Assets/lilToon/[Shader] Refresh shaders";
+        private static bool isRefreshShadersQueued;
+
+        private static void DrawRefreshShadersButton()
+        {
+            Color previousBackgroundColor = GUI.backgroundColor;
+            try
+            {
+                GUI.backgroundColor = new Color(0.4f, 0.9f, 0.45f);
+                using (new EditorGUI.DisabledScope(isRefreshShadersQueued || EditorApplication.isCompiling || EditorApplication.isUpdating || BuildPipeline.isBuildingPlayer))
+                {
+                    if (GUILayout.Button(new GUIContent("表示を復旧（Refresh shaders）",
+                        "アバターのビルド・アップロード後に、シーン上のメッシュが透明になったり表示されなくなった場合に実行してください。\n対象メッシュを選択し、マテリアルをInspectorに表示した状態で押してください。\nlilToonのRefresh shadersメニューと同じ処理で、他のlilToonシェーダーも更新されます。")))
+                    {
+                        // Reimport outside OnGUI so the current material properties remain valid during drawing.
+                        // Shared across inspectors to avoid queuing duplicate refreshes.
+                        isRefreshShadersQueued = true;
+                        EditorApplication.delayCall += RefreshShadersFromInspector;
+                    }
+                }
+            }
+            finally
+            {
+                GUI.backgroundColor = previousBackgroundColor;
+            }
+        }
+
+        private static void RefreshShadersFromInspector()
+        {
+            try
+            {
+                if (!EditorApplication.ExecuteMenuItem(refreshShadersMenuPath))
+                {
+                    Debug.LogWarning("[dennoko Specular] lilToonのRefresh shadersメニューを実行できませんでした。Assets > lilToonのメニューを確認してください。");
+                }
+                SceneView.RepaintAll();
+            }
+            finally
+            {
+                isRefreshShadersQueued = false;
+            }
+        }
         
         // Custom MatCaps
         private        bool isShowMatCap1 = false;
@@ -105,11 +142,9 @@ namespace lilToon
             _SpecColorMap1          = FindProperty("_SpecColorMap1", props);
             _SpecIntensity1         = FindProperty("_SpecIntensity1", props);
             _UseSpecIntensityMap1   = FindProperty("_UseSpecIntensityMap1", props);
-            _SpecIntensityMap1      = FindProperty("_SpecIntensityMap1", props);
             _SpecIntensityMap1_Channel = FindProperty("_SpecIntensityMap1_Channel", props);
             _SpecSmoothness1        = FindProperty("_SpecSmoothness1", props);
             _UseSpecSmoothnessMap1  = FindProperty("_UseSpecSmoothnessMap1", props);
-            _SpecSmoothnessMap1     = FindProperty("_SpecSmoothnessMap1", props);
             _SpecSmoothnessMap1_Channel = FindProperty("_SpecSmoothnessMap1_Channel", props);
             _SpecNormalStrength1    = FindProperty("_SpecNormalStrength1", props);
             _SpecUseFresnel1        = FindProperty("_SpecUseFresnel1", props);
@@ -123,11 +158,9 @@ namespace lilToon
             _SpecColorMap2          = FindProperty("_SpecColorMap2", props);
             _SpecIntensity2         = FindProperty("_SpecIntensity2", props);
             _UseSpecIntensityMap2   = FindProperty("_UseSpecIntensityMap2", props);
-            _SpecIntensityMap2      = FindProperty("_SpecIntensityMap2", props);
             _SpecIntensityMap2_Channel = FindProperty("_SpecIntensityMap2_Channel", props);
             _SpecSmoothness2        = FindProperty("_SpecSmoothness2", props);
             _UseSpecSmoothnessMap2  = FindProperty("_UseSpecSmoothnessMap2", props);
-            _SpecSmoothnessMap2     = FindProperty("_SpecSmoothnessMap2", props);
             _SpecSmoothnessMap2_Channel = FindProperty("_SpecSmoothnessMap2_Channel", props);
             _SpecNormalStrength2    = FindProperty("_SpecNormalStrength2", props);
             _SpecUseFresnel2        = FindProperty("_SpecUseFresnel2", props);
@@ -162,208 +195,194 @@ namespace lilToon
             // customBox        box (similar to unity default box)
             // customToggleFont label for box
 
-            isShowCustomProperties = Foldout("Custom Properties", "Custom Properties", isShowCustomProperties);
-            if(isShowCustomProperties)
+            DrawRefreshShadersButton();
+            EditorGUILayout.Space();
+
+            // Specular 1st
+            isShowSpec1 = Foldout("Specular 1st", "Specular 1st parameters", isShowSpec1);
+            if(isShowSpec1)
             {
                 EditorGUILayout.BeginVertical(boxOuter);
-//                EditorGUILayout.LabelField(GetLoc("dennoko_extension"), customToggleFont);
+                EditorGUILayout.LabelField("Specular 1st", customToggleFont);
                 EditorGUILayout.BeginVertical(boxInnerHalf);
 
-                // Specular 1st
-                isShowSpec1 = Foldout("Specular1st", "Specular 1st parameters", isShowSpec1);
-                if(isShowSpec1)
+                m_MaterialEditor.ShaderProperty(_EnableSpec1, new GUIContent("有効化", "スペキュラー1層目を有効にします。"));
+
+                lilEditorGUI.DrawLine();
+                EditorGUILayout.LabelField("マスク・ノイズ設定", boldLabel);
+                m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Mask 1", "1層目のスペキュラー適用範囲マスク。使用チャンネルでR/G/B/Aから選択します。"), _SpecMask1);
+                m_MaterialEditor.TextureScaleOffsetProperty(_SpecMask1);
+                DrawChannelPopup(_SpecMask1_Channel, "Mask 1 Channel", "マスクで使用するチャンネル (R/G/B/A)");
+                m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Noise 1", "1層目のスペキュラー強度に乗算するノイズ。使用チャンネルを選択できます。"), _SpecNoiseTex1);
+                m_MaterialEditor.TextureScaleOffsetProperty(_SpecNoiseTex1);
+                DrawChannelPopup(_SpecNoiseTex1_Channel, "Noise 1 Channel", "ノイズで使用するチャンネル (R/G/B/A)");
+
+                lilEditorGUI.DrawLine();
+                EditorGUILayout.LabelField("カラー・反射設定", boldLabel);
+                m_MaterialEditor.ShaderProperty(_UseSpecColorMap1, new GUIContent("カラーマップ使用", "スペキュラーカラーにテクスチャ(RGB)を使用します。OFFのときは下の色を使用します。"));
+                if(_UseSpecColorMap1.floatValue > 0.5f)
                 {
-                    EditorGUILayout.BeginVertical(boxOuter);
-                    EditorGUILayout.LabelField("Specular 1st", customToggleFont);
-                    EditorGUILayout.BeginVertical(boxInner);
+                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Color Map (RGB)", "スペキュラーカラーマップ(RGB)。"), _SpecColorMap1);
+                    m_MaterialEditor.TextureScaleOffsetProperty(_SpecColorMap1);
+                }
+                DrawColorWithHex(_SpecColor1, "色", "スペキュラーのベースカラー。カラーマップ未使用時に適用されます。");
 
-                    m_MaterialEditor.ShaderProperty(_EnableSpec1, new GUIContent("有効化", "スペキュラー1層目を有効にします。"));
-
-                    // Mask / Noise for 1st layer
-                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Mask 1", "1層目のスペキュラー適用範囲マスク。使用チャンネルでR/G/B/Aから選択します。"), _SpecMask1);
-                    m_MaterialEditor.TextureScaleOffsetProperty(_SpecMask1);
-                    DrawChannelPopup(_SpecMask1_Channel, "Mask 1 Channel", "マスクで使用するチャンネル (R/G/B/A)");
-                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Noise 1", "1層目のスペキュラー強度に乗算するノイズ。使用チャンネルを選択できます。"), _SpecNoiseTex1);
-                    m_MaterialEditor.TextureScaleOffsetProperty(_SpecNoiseTex1);
-                    DrawChannelPopup(_SpecNoiseTex1_Channel, "Noise 1 Channel", "ノイズで使用するチャンネル (R/G/B/A)");
-
-                    // Color
-                    m_MaterialEditor.ShaderProperty(_UseSpecColorMap1, new GUIContent("カラーマップ使用", "スペキュラーカラーにテクスチャ(RGB)を使用します。OFFのときは下の色を使用します。"));
-                    if(_UseSpecColorMap1.floatValue > 0.5f)
-                    {
-                        m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Color Map (RGB)", "スペキュラーカラーマップ(RGB)。"), _SpecColorMap1);
-                        m_MaterialEditor.TextureScaleOffsetProperty(_SpecColorMap1);
-                    }
-                    // Color with tooltip + Hex input
-                    DrawColorWithHex(_SpecColor1, "色", "スペキュラーのベースカラー。カラーマップ未使用時に適用されます。");
-
-                    // Intensity
-                    m_MaterialEditor.ShaderProperty(_UseSpecIntensityMap1, new GUIContent("強度マップ使用", "スペキュラー強度にテクスチャのチャンネルを使用します。OFFのときは下のスライダー値を使用します。"));
-                    if(_UseSpecIntensityMap1.floatValue > 0.5f)
-                    {
-                        m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Intensity Map", "強度マップ。使用チャンネルを選択できます。"), _SpecIntensityMap1);
-                        m_MaterialEditor.TextureScaleOffsetProperty(_SpecIntensityMap1);
-                        DrawChannelPopup(_SpecIntensityMap1_Channel, "Intensity Channel", "強度で使用するチャンネル (R/G/B/A)");
-                    }
-                    else
-                    {
-                        m_MaterialEditor.ShaderProperty(_SpecIntensity1, new GUIContent("強度", "スペキュラーの明るさ/寄与度。"));
-                    }
-
-                    // Smoothness
-                    m_MaterialEditor.ShaderProperty(_UseSpecSmoothnessMap1, new GUIContent("スムースネスマップ使用", "ハイライトの鋭さ(スムースネス)にテクスチャのチャンネルを使用します。OFFのときは下のスライダー値を使用します。"));
-                    if(_UseSpecSmoothnessMap1.floatValue > 0.5f)
-                    {
-                        m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Smoothness Map", "スムースネスマップ。使用チャンネルを選択できます。"), _SpecSmoothnessMap1);
-                        m_MaterialEditor.TextureScaleOffsetProperty(_SpecSmoothnessMap1);
-                        DrawChannelPopup(_SpecSmoothnessMap1_Channel, "Smoothness Channel", "スムースネスで使用するチャンネル (R/G/B/A)");
-                    }
-                    else
-                    {
-                        m_MaterialEditor.ShaderProperty(_SpecSmoothness1, new GUIContent("スムースネス", "ハイライトの鋭さ。大きいほど鋭く小さいほど広がります。"));
-                    }
-
-                    // Normal Strength 1
-                    m_MaterialEditor.ShaderProperty(_SpecNormalStrength1, new GUIContent("ノーマル強度", "1層目のノーマルマップ強度。0で無効、1でそのまま、2以上で傾きを強くします。値域が破綻しないよう内部で補間します。"));
-
-                    // Fresnel rim 1
-                    m_MaterialEditor.ShaderProperty(_SpecUseFresnel1, new GUIContent("フレネルリム有効化", "視線に対して斜めになるシルエット端にリムハイライトを追加します。レザーの端の光沢感に有効です。"));
-                    if (_SpecUseFresnel1.floatValue > 0.5f)
-                    {
-                        DrawColorWithHex(_SpecF0Color1, "リムカラー", "シルエット端に加算するリムハイライトの色。白=ニュートラル、色をつけると有色リムになります。");
-                        m_MaterialEditor.ShaderProperty(_SpecFresnelStrength1, new GUIContent("リム強度", "フレネルリムの強さ。大きいほど端が明るくなります。"));
-                    }
-
-                    EditorGUILayout.EndVertical();
-                    EditorGUILayout.EndVertical();
+                lilEditorGUI.DrawLine();
+                EditorGUILayout.LabelField("強度・スムースネス設定", boldLabel);
+                m_MaterialEditor.ShaderProperty(_UseSpecIntensityMap1, new GUIContent("強度マップ使用", "スペキュラー強度にマスクテクスチャのチャンネルを使用します(タイリングはマスクと共通)。OFFのときは下のスライダー値を使用します。"));
+                if(_UseSpecIntensityMap1.floatValue > 0.5f)
+                {
+                    DrawChannelPopup(_SpecIntensityMap1_Channel, "Intensity Channel", "Mask 1 のうち強度に使用するチャンネル (R/G/B/A)");
+                }
+                else
+                {
+                    m_MaterialEditor.ShaderProperty(_SpecIntensity1, new GUIContent("強度", "スペキュラーの明るさ/寄与度。"));
                 }
 
-                // Specular 2nd
-                isShowSpec2 = Foldout("Specular2nd", "Specular 2nd parameters", isShowSpec2);
-                if(isShowSpec2)
+                m_MaterialEditor.ShaderProperty(_UseSpecSmoothnessMap1, new GUIContent("スムースネスマップ使用", "ハイライトの鋭さ(スムースネス)にマスクテクスチャのチャンネルを使用します(タイリングはマスクと共通)。OFFのときは下のスライダー値を使用します。"));
+                if(_UseSpecSmoothnessMap1.floatValue > 0.5f)
                 {
-                    EditorGUILayout.BeginVertical(boxOuter);
-                    EditorGUILayout.LabelField("Specular 2nd", customToggleFont);
-                    EditorGUILayout.BeginVertical(boxInner);
-
-                    m_MaterialEditor.ShaderProperty(_EnableSpec2, new GUIContent("有効化", "スペキュラー2層目を有効にします。"));
-
-                    // Mask / Noise for 2nd layer
-                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Mask 2", "2層目のスペキュラー適用範囲マスク。使用チャンネルでR/G/B/Aから選択します。"), _SpecMask2);
-                    m_MaterialEditor.TextureScaleOffsetProperty(_SpecMask2);
-                    DrawChannelPopup(_SpecMask2_Channel, "Mask 2 Channel", "マスクで使用するチャンネル (R/G/B/A)");
-                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Noise 2", "2層目のスペキュラー強度に乗算するノイズ。使用チャンネルを選択できます。"), _SpecNoiseTex2);
-                    m_MaterialEditor.TextureScaleOffsetProperty(_SpecNoiseTex2);
-                    DrawChannelPopup(_SpecNoiseTex2_Channel, "Noise 2 Channel", "ノイズで使用するチャンネル (R/G/B/A)");
-
-                    // Color
-                    m_MaterialEditor.ShaderProperty(_UseSpecColorMap2, new GUIContent("カラーマップ使用", "スペキュラーカラーにテクスチャ(RGB)を使用します。OFFのときは下の色を使用します。"));
-                    if(_UseSpecColorMap2.floatValue > 0.5f)
-                    {
-                        m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Color Map (RGB)", "スペキュラーカラーマップ(RGB)。"), _SpecColorMap2);
-                        m_MaterialEditor.TextureScaleOffsetProperty(_SpecColorMap2);
-                    }
-                    // Color with tooltip + Hex input
-                    DrawColorWithHex(_SpecColor2, "色", "スペキュラーのベースカラー。カラーマップ未使用時に適用されます。");
-
-                    // Intensity
-                    m_MaterialEditor.ShaderProperty(_UseSpecIntensityMap2, new GUIContent("強度マップ使用", "スペキュラー強度にテクスチャのチャンネルを使用します。OFFのときは下のスライダー値を使用します。"));
-                    if(_UseSpecIntensityMap2.floatValue > 0.5f)
-                    {
-                        m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Intensity Map (R)", "強度マップ。使用チャンネルを選択できます。"), _SpecIntensityMap2);
-                        m_MaterialEditor.TextureScaleOffsetProperty(_SpecIntensityMap2);
-                        DrawChannelPopup(_SpecIntensityMap2_Channel, "Intensity Channel", "強度で使用するチャンネル (R/G/B/A)");
-                    }
-                    else
-                    {
-                        m_MaterialEditor.ShaderProperty(_SpecIntensity2, new GUIContent("強度", "スペキュラーの明るさ/寄与度。"));
-                    }
-
-                    // Smoothness
-                    m_MaterialEditor.ShaderProperty(_UseSpecSmoothnessMap2, new GUIContent("スムースネスマップ使用", "ハイライトの鋭さ(スムースネス)にテクスチャのチャンネルを使用します。OFFのときは下のスライダー値を使用します。"));
-                    if(_UseSpecSmoothnessMap2.floatValue > 0.5f)
-                    {
-                        m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Smoothness Map (R)", "スムースネスマップ。使用チャンネルを選択できます。"), _SpecSmoothnessMap2);
-                        m_MaterialEditor.TextureScaleOffsetProperty(_SpecSmoothnessMap2);
-                        DrawChannelPopup(_SpecSmoothnessMap2_Channel, "Smoothness Channel", "スムースネスで使用するチャンネル (R/G/B/A)");
-                    }
-                    else
-                    {
-                        m_MaterialEditor.ShaderProperty(_SpecSmoothness2, new GUIContent("スムースネス", "ハイライトの鋭さ。大きいほど鋭く小さいほど広がります。"));
-                    }
-
-                    // Normal Strength 2
-                    m_MaterialEditor.ShaderProperty(_SpecNormalStrength2, new GUIContent("ノーマル強度", "2層目のノーマルマップ強度。0で無効、1でそのまま、2以上で傾きを強くします。値域が破綻しないよう内部で補間します。"));
-
-                    // Fresnel rim 2
-                    m_MaterialEditor.ShaderProperty(_SpecUseFresnel2, new GUIContent("フレネルリム有効化", "視線に対して斜めになるシルエット端にリムハイライトを追加します。レザーの端の光沢感に有効です。"));
-                    if (_SpecUseFresnel2.floatValue > 0.5f)
-                    {
-                        DrawColorWithHex(_SpecF0Color2, "リムカラー", "シルエット端に加算するリムハイライトの色。白=ニュートラル、色をつけると有色リムになります。");
-                        m_MaterialEditor.ShaderProperty(_SpecFresnelStrength2, new GUIContent("リム強度", "フレネルリムの強さ。大きいほど端が明るくなります。"));
-                    }
-
-                    EditorGUILayout.EndVertical();
-                    EditorGUILayout.EndVertical();
+                    DrawChannelPopup(_SpecSmoothnessMap1_Channel, "Smoothness Channel", "Mask 1 のうちスムースネスに使用するチャンネル (R/G/B/A)");
+                }
+                else
+                {
+                    m_MaterialEditor.ShaderProperty(_SpecSmoothness1, new GUIContent("スムースネス", "ハイライトの鋭さ。大きいほど鋭く小さいほど広がります。"));
                 }
 
-                // MatCap 1
-                isShowMatCap1 = Foldout("MatCap", "MatCap parameters", isShowMatCap1);
-                if(isShowMatCap1)
+                m_MaterialEditor.ShaderProperty(_SpecNormalStrength1, new GUIContent("ノーマル強度", "1層目のノーマルマップ強度。0で無効、1でそのまま、2以上で傾きを強くします。値域が破綻しないよう内部で補間します。"));
+
+                lilEditorGUI.DrawLine();
+                EditorGUILayout.LabelField("フレネルリム設定", boldLabel);
+                m_MaterialEditor.ShaderProperty(_SpecUseFresnel1, new GUIContent("フレネルリム有効化", "視線に対して斜めになるシルエット端にリムハイライトを追加します。レザーの端の光沢感に有効です。"));
+                if (_SpecUseFresnel1.floatValue > 0.5f)
                 {
-                    EditorGUILayout.BeginVertical(boxOuter);
-                    EditorGUILayout.LabelField("MatCap", customToggleFont);
+                    DrawColorWithHex(_SpecF0Color1, "リムカラー", "シルエット端に加算するリムハイライトの色。白=ニュートラル、色をつけると有色リムになります。");
+                    m_MaterialEditor.ShaderProperty(_SpecFresnelStrength1, new GUIContent("リム強度", "フレネルリムの強さ。大きいほど端が明るくなります。"));
+                }
+
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.EndVertical();
+            }
+
+            // Specular 2nd
+            isShowSpec2 = Foldout("Specular 2nd", "Specular 2nd parameters", isShowSpec2);
+            if(isShowSpec2)
+            {
+                EditorGUILayout.BeginVertical(boxOuter);
+                EditorGUILayout.LabelField("Specular 2nd", customToggleFont);
+                EditorGUILayout.BeginVertical(boxInnerHalf);
+
+                m_MaterialEditor.ShaderProperty(_EnableSpec2, new GUIContent("有効化", "スペキュラー2層目を有効にします。"));
+
+                lilEditorGUI.DrawLine();
+                EditorGUILayout.LabelField("マスク・ノイズ設定", boldLabel);
+                m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Mask 2", "2層目のスペキュラー適用範囲マスク。使用チャンネルでR/G/B/Aから選択します。"), _SpecMask2);
+                m_MaterialEditor.TextureScaleOffsetProperty(_SpecMask2);
+                DrawChannelPopup(_SpecMask2_Channel, "Mask 2 Channel", "マスクで使用するチャンネル (R/G/B/A)");
+                m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Noise 2", "2層目のスペキュラー強度に乗算するノイズ。使用チャンネルを選択できます。"), _SpecNoiseTex2);
+                m_MaterialEditor.TextureScaleOffsetProperty(_SpecNoiseTex2);
+                DrawChannelPopup(_SpecNoiseTex2_Channel, "Noise 2 Channel", "ノイズで使用するチャンネル (R/G/B/A)");
+
+                lilEditorGUI.DrawLine();
+                EditorGUILayout.LabelField("カラー・反射設定", boldLabel);
+                m_MaterialEditor.ShaderProperty(_UseSpecColorMap2, new GUIContent("カラーマップ使用", "スペキュラーカラーにテクスチャ(RGB)を使用します。OFFのときは下の色を使用します。"));
+                if(_UseSpecColorMap2.floatValue > 0.5f)
+                {
+                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Color Map (RGB)", "スペキュラーカラーマップ(RGB)。"), _SpecColorMap2);
+                    m_MaterialEditor.TextureScaleOffsetProperty(_SpecColorMap2);
+                }
+                DrawColorWithHex(_SpecColor2, "色", "スペキュラーのベースカラー。カラーマップ未使用時に適用されます。");
+
+                lilEditorGUI.DrawLine();
+                EditorGUILayout.LabelField("強度・スムースネス設定", boldLabel);
+                m_MaterialEditor.ShaderProperty(_UseSpecIntensityMap2, new GUIContent("強度マップ使用", "スペキュラー強度にマスクテクスチャのチャンネルを使用します(タイリングはマスクと共通)。OFFのときは下のスライダー値を使用します。"));
+                if(_UseSpecIntensityMap2.floatValue > 0.5f)
+                {
+                    DrawChannelPopup(_SpecIntensityMap2_Channel, "Intensity Channel", "Mask 2 のうち強度に使用するチャンネル (R/G/B/A)");
+                }
+                else
+                {
+                    m_MaterialEditor.ShaderProperty(_SpecIntensity2, new GUIContent("強度", "スペキュラーの明るさ/寄与度。"));
+                }
+
+                m_MaterialEditor.ShaderProperty(_UseSpecSmoothnessMap2, new GUIContent("スムースネスマップ使用", "ハイライトの鋭さ(スムースネス)にマスクテクスチャのチャンネルを使用します(タイリングはマスクと共通)。OFFのときは下のスライダー値を使用します。"));
+                if(_UseSpecSmoothnessMap2.floatValue > 0.5f)
+                {
+                    DrawChannelPopup(_SpecSmoothnessMap2_Channel, "Smoothness Channel", "Mask 2 のうちスムースネスに使用するチャンネル (R/G/B/A)");
+                }
+                else
+                {
+                    m_MaterialEditor.ShaderProperty(_SpecSmoothness2, new GUIContent("スムースネス", "ハイライトの鋭さ。大きいほど鋭く小さいほど広がります。"));
+                }
+
+                m_MaterialEditor.ShaderProperty(_SpecNormalStrength2, new GUIContent("ノーマル強度", "2層目のノーマルマップ強度。0で無効、1でそのまま、2以上で傾きを強くします。値域が破綻しないよう内部で補間します。"));
+
+                lilEditorGUI.DrawLine();
+                EditorGUILayout.LabelField("フレネルリム設定", boldLabel);
+                m_MaterialEditor.ShaderProperty(_SpecUseFresnel2, new GUIContent("フレネルリム有効化", "視線に対して斜めになるシルエット端にリムハイライトを追加します。レザーの端の光沢感に有効です。"));
+                if (_SpecUseFresnel2.floatValue > 0.5f)
+                {
+                    DrawColorWithHex(_SpecF0Color2, "リムカラー", "シルエット端に加算するリムハイライトの色。白=ニュートラル、色をつけると有色リムになります。");
+                    m_MaterialEditor.ShaderProperty(_SpecFresnelStrength2, new GUIContent("リム強度", "フレネルリムの強さ。大きいほど端が明るくなります。"));
+                }
+
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.EndVertical();
+            }
+
+            // MatCap 1
+            isShowMatCap1 = Foldout("MatCap", "MatCap parameters", isShowMatCap1);
+            if(isShowMatCap1)
+            {
+                EditorGUILayout.BeginVertical(boxOuter);
+                EditorGUILayout.LabelField("MatCap", customToggleFont);
+                EditorGUILayout.BeginVertical(boxInnerHalf);
+                
+                bool matCap1Valid = _CustomMatCap1_Enable != null && _CustomMatCap1_Tex != null && _CustomMatCap1_Color != null &&
+                                    _CustomMatCap1_Blend != null && _CustomMatCap1_Blur != null && _CustomMatCap1_Mask != null &&
+                                    _CustomMatCap1_BumpScale != null && _CustomMatCap1_UseReflection != null && _CustomMatCap1_DisableBackface != null &&
+                                    _CustomMatCap1_EnableLighting != null &&
+                                    _CustomMatCap1_Alpha != null;
+
+                if (matCap1Valid)
+                {
+                    m_MaterialEditor.ShaderProperty(_CustomMatCap1_Enable, new GUIContent("有効化"));
+
+                    lilEditorGUI.DrawLine();
+                    EditorGUILayout.LabelField("テクスチャ・ブレンド設定", boldLabel);
+                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Texture"), _CustomMatCap1_Tex, _CustomMatCap1_Color);
+                    m_MaterialEditor.ShaderProperty(_CustomMatCap1_Alpha, new GUIContent("Strength"));
+                    m_MaterialEditor.TextureScaleOffsetProperty(_CustomMatCap1_Tex);
                     
-                    bool matCap1Valid = _CustomMatCap1_Enable != null && _CustomMatCap1_Tex != null && _CustomMatCap1_Color != null &&
-                                        _CustomMatCap1_Blend != null && _CustomMatCap1_Blur != null && _CustomMatCap1_Mask != null &&
-                                        _CustomMatCap1_BumpScale != null && _CustomMatCap1_UseReflection != null && _CustomMatCap1_DisableBackface != null &&
-                                        _CustomMatCap1_EnableLighting != null &&
-                                        _CustomMatCap1_Alpha != null;
-
-                    if (matCap1Valid)
+                    // Blend Mode Dropdown
+                    EditorGUI.BeginChangeCheck();
+                    string[] blendModes = { "Add", "Screen", "Multiply" };
+                    int blendMode = (int)_CustomMatCap1_Blend.floatValue;
+                    blendMode = EditorGUILayout.Popup(new GUIContent("Blend Mode"), blendMode, blendModes);
+                    if (EditorGUI.EndChangeCheck())
                     {
-                        EditorGUILayout.BeginVertical(boxInner);
-                        
-                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_Enable, new GUIContent("Enable"));
-                        m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Texture"), _CustomMatCap1_Tex, _CustomMatCap1_Color);
-                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_Alpha, new GUIContent("Strength"));
-                        // Using TexturePropertySingleLine for Color as well (passed as extra property) or just ShaderProperty
-                        // m_MaterialEditor.ColorProperty(_CustomMatCap1_Color, "Color"); // ColorProperty isn't standard in MaterialEditor in this way, assumes prop.
-                        // Let's use ShaderProperty for Color
-                        // m_MaterialEditor.ShaderProperty(_CustomMatCap1_Color, new GUIContent("Color"));
-                        
-                         m_MaterialEditor.TextureScaleOffsetProperty(_CustomMatCap1_Tex);
-                        
-                        // Blend Mode Dropdown
-                        EditorGUI.BeginChangeCheck();
-                        string[] blendModes = { "Add", "Screen", "Multiply" };
-                        int blendMode = (int)_CustomMatCap1_Blend.floatValue;
-                        blendMode = EditorGUILayout.Popup(new GUIContent("Blend Mode"), blendMode, blendModes);
-                        if (EditorGUI.EndChangeCheck())
-                        {
-                            _CustomMatCap1_Blend.floatValue = blendMode;
-                        }
-
-                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_Blur, new GUIContent("Blur"));
-
-                        m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Mask"), _CustomMatCap1_Mask);
-                         m_MaterialEditor.TextureScaleOffsetProperty(_CustomMatCap1_Mask);
-                        
-                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_BumpScale, new GUIContent("Normal Strength"));
-                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_UseReflection, new GUIContent("Use Reflection", "If enabled, samples the MatCap using the reflection vector (like a Cubemap) instead of the normal vector."));
-                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_DisableBackface, new GUIContent("Disable on Backface", "If enabled, the MatCap will not be applied to backfaces."));
-
-                        m_MaterialEditor.ShaderProperty(_CustomMatCap1_EnableLighting, new GUIContent("Enable Lighting"));
-
-                        EditorGUILayout.EndVertical();
+                        _CustomMatCap1_Blend.floatValue = blendMode;
                     }
-                    else
-                    {
-                        EditorGUILayout.HelpBox("MatCap 1 properties incomplete.", MessageType.Error);
-                    }
-                    EditorGUILayout.EndVertical();
+
+                    m_MaterialEditor.ShaderProperty(_CustomMatCap1_Blur, new GUIContent("Blur"));
+
+                    lilEditorGUI.DrawLine();
+                    EditorGUILayout.LabelField("マスク設定", boldLabel);
+                    m_MaterialEditor.TexturePropertySingleLine(new GUIContent("Mask"), _CustomMatCap1_Mask);
+                    m_MaterialEditor.TextureScaleOffsetProperty(_CustomMatCap1_Mask);
+                    
+                    lilEditorGUI.DrawLine();
+                    EditorGUILayout.LabelField("法線・ライティング設定", boldLabel);
+                    m_MaterialEditor.ShaderProperty(_CustomMatCap1_BumpScale, new GUIContent("Normal Strength"));
+                    m_MaterialEditor.ShaderProperty(_CustomMatCap1_UseReflection, new GUIContent("Use Reflection", "If enabled, samples the MatCap using the reflection vector (like a Cubemap) instead of the normal vector."));
+                    m_MaterialEditor.ShaderProperty(_CustomMatCap1_DisableBackface, new GUIContent("Disable on Backface", "If enabled, the MatCap will not be applied to backfaces."));
+
+                    m_MaterialEditor.ShaderProperty(_CustomMatCap1_EnableLighting, new GUIContent("Enable Lighting"));
                 }
-
+                else
+                {
+                    EditorGUILayout.HelpBox("MatCap 1 properties incomplete.", MessageType.Error);
+                }
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.EndVertical();
             }

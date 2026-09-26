@@ -35,10 +35,6 @@
 	float4 _SpecNoiseTex2_ST; \
 	float4 _SpecColorMap1_ST; \
 	float4 _SpecColorMap2_ST; \
-	float4 _SpecIntensityMap1_ST; \
-	float4 _SpecIntensityMap2_ST; \
-	float4 _SpecSmoothnessMap1_ST; \
-	float4 _SpecSmoothnessMap2_ST; \
 	float _SpecNormalStrength1; \
 	float _SpecNormalStrength2; \
 	/* Fresnel rim */ \
@@ -72,10 +68,6 @@
 	TEXTURE2D(_SpecNoiseTex2); \
 	TEXTURE2D(_SpecColorMap1); \
 	TEXTURE2D(_SpecColorMap2); \
-	TEXTURE2D(_SpecIntensityMap1); \
-	TEXTURE2D(_SpecIntensityMap2); \
-	TEXTURE2D(_SpecSmoothnessMap1); \
-	TEXTURE2D(_SpecSmoothnessMap2); \
 	TEXTURE2D(_CustomMatCap1_Tex); \
 	TEXTURE2D(_CustomMatCap1_Mask); \
 
@@ -150,7 +142,8 @@ float dnkw_pick_channel(float4 v, int channel)
 		float3 specAccum = 0; \
 		/* Layer 1 */ \
 		if(_EnableSpec1 > 0.5) { \
-			float mask1 = DNKW_SAMPLE_SCALAR_CH(_SpecMask1, _SpecMask1_ST, uvMain, _SpecMask1_Channel); \
+			float4 maskTex1 = DNKW_SAMPLE(_SpecMask1, _SpecMask1_ST, uvMain); \
+			float mask1 = dnkw_pick_channel(maskTex1, _SpecMask1_Channel); \
 			float noise1 = DNKW_SAMPLE_SCALAR_CH(_SpecNoiseTex1, _SpecNoiseTex1_ST, uvMain, _SpecNoiseTex1_Channel); \
 			float overall1 = saturate(mask1 * noise1); \
 			if (overall1 > 0.0001) { \
@@ -159,8 +152,8 @@ float dnkw_pick_channel(float4 v, int channel)
 				float nl1 = saturate(dot(N1, L)); \
 				float nh1 = saturate(dot(N1, H)); \
 				float3 baseCol1 = (_UseSpecColorMap1 > 0.5 ? DNKW_SAMPLE_COLOR(_SpecColorMap1, _SpecColorMap1_ST, uvMain) : float3(1,1,1)) * _SpecColor1.rgb; \
-				float intensity1 = _SpecIntensity1 * (_UseSpecIntensityMap1 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap1, _SpecIntensityMap1_ST, uvMain, _SpecIntensityMap1_Channel) : 1.0); \
-				float smooth1 = saturate(_SpecSmoothness1 * (_UseSpecSmoothnessMap1 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap1, _SpecSmoothnessMap1_ST, uvMain, _SpecSmoothnessMap1_Channel) : 1.0)); \
+				float intensity1 = _SpecIntensity1 * (_UseSpecIntensityMap1 > 0.5 ? dnkw_pick_channel(maskTex1, _SpecIntensityMap1_Channel) : 1.0); \
+				float smooth1 = saturate(_SpecSmoothness1 * (_UseSpecSmoothnessMap1 > 0.5 ? dnkw_pick_channel(maskTex1, _SpecSmoothnessMap1_Channel) : 1.0)); \
 				float power1 = pow(2.0, lerp(3.0, 10.0, smooth1)); \
 				float specTerm1 = pow(nh1, power1) * nl1; \
 				specAccum += overall1 * baseCol1 * intensity1 * specTerm1; \
@@ -173,7 +166,8 @@ float dnkw_pick_channel(float4 v, int channel)
 		} \
 		/* Layer 2 */ \
 		if(_EnableSpec2 > 0.5) { \
-			float mask2 = DNKW_SAMPLE_SCALAR_CH(_SpecMask2, _SpecMask2_ST, uvMain, _SpecMask2_Channel); \
+			float4 maskTex2 = DNKW_SAMPLE(_SpecMask2, _SpecMask2_ST, uvMain); \
+			float mask2 = dnkw_pick_channel(maskTex2, _SpecMask2_Channel); \
 			float noise2 = DNKW_SAMPLE_SCALAR_CH(_SpecNoiseTex2, _SpecNoiseTex2_ST, uvMain, _SpecNoiseTex2_Channel); \
 			float overall2 = saturate(mask2 * noise2); \
 			if (overall2 > 0.0001) { \
@@ -182,8 +176,8 @@ float dnkw_pick_channel(float4 v, int channel)
 				float nl2 = saturate(dot(N2, L)); \
 				float nh2 = saturate(dot(N2, H)); \
 				float3 baseCol2 = (_UseSpecColorMap2 > 0.5 ? DNKW_SAMPLE_COLOR(_SpecColorMap2, _SpecColorMap2_ST, uvMain) : float3(1,1,1)) * _SpecColor2.rgb; \
-				float intensity2 = _SpecIntensity2 * (_UseSpecIntensityMap2 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecIntensityMap2, _SpecIntensityMap2_ST, uvMain, _SpecIntensityMap2_Channel) : 1.0); \
-				float smooth2 = saturate(_SpecSmoothness2 * (_UseSpecSmoothnessMap2 > 0.5 ? DNKW_SAMPLE_SCALAR_CH(_SpecSmoothnessMap2, _SpecSmoothnessMap2_ST, uvMain, _SpecSmoothnessMap2_Channel) : 1.0)); \
+				float intensity2 = _SpecIntensity2 * (_UseSpecIntensityMap2 > 0.5 ? dnkw_pick_channel(maskTex2, _SpecIntensityMap2_Channel) : 1.0); \
+				float smooth2 = saturate(_SpecSmoothness2 * (_UseSpecSmoothnessMap2 > 0.5 ? dnkw_pick_channel(maskTex2, _SpecSmoothnessMap2_Channel) : 1.0)); \
 				float power2 = pow(2.0, lerp(3.0, 10.0, smooth2)); \
 				float specTerm2 = pow(nh2, power2) * nl2; \
 				specAccum += overall2 * baseCol2 * intensity2 * specTerm2; \
