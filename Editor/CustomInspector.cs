@@ -1,5 +1,5 @@
 #if UNITY_EDITOR
-using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -77,6 +77,19 @@ namespace lilToon
             finally
             {
                 GUI.backgroundColor = previousBackgroundColor;
+            }
+        }
+
+        private void DrawLegacyMapNotice()
+        {
+            Material[] legacyMats = m_MaterialEditor.targets.OfType<Material>().Where(DennokoSpecularMigration.NeedsBake).ToArray();
+            if (legacyMats.Length == 0) return;
+
+            EditorGUILayout.HelpBox("旧バージョンの強度マップ/スムースネスマップが設定されています。現在のバージョンでは Mask テクスチャのチャンネルから読むため、このままでは見た目が変わります。\n下のボタンで、Mask・強度・スムースネスを R/G/B にパックしたテクスチャをマテリアルと同じフォルダに作成し、Mask に設定します。", MessageType.Warning);
+            if (GUILayout.Button("Mask にパックして変換"))
+            {
+                // Asset creation/import must not run inside OnGUI.
+                EditorApplication.delayCall += () => DennokoSpecularMigration.BakeMaterials(legacyMats);
             }
         }
 
@@ -196,6 +209,7 @@ namespace lilToon
             // customToggleFont label for box
 
             DrawRefreshShadersButton();
+            DrawLegacyMapNotice();
             EditorGUILayout.Space();
 
             // Specular 1st
@@ -499,63 +513,6 @@ namespace lilToon
             ltsto       = Shader.Find("Hidden/" + shaderName + "/TransparentOutline");
 
             // Do NOT assign OnePass/TwoPass Transparent or Lite/Multi/Optional variants to hide them from the UI
-        }
-
-        // --------------------------------------------------
-        // Schema v1 migration: linear smoothness → log scale
-        // pow(2, lerp(3,10,s)) replaces lerp(8,1024,s)
-        // Conversion: s_new = (log2(8 + 1016*s_old) - 3) / 7
-        // --------------------------------------------------
-
-        [UnityEditor.Callbacks.DidReloadScripts]
-        static void OnScriptsReloaded()
-        {
-            EditorApplication.delayCall += MigrateAllMaterials;
-        }
-
-        [MenuItem("Tools/dennoko/Migrate Specular Materials")]
-        static void MigrateAllMaterials()
-        {
-            string[] guids = AssetDatabase.FindAssets("t:Material");
-            int count = 0;
-            foreach (string guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-                if (mat == null || mat.shader == null) continue;
-                if (!mat.shader.name.Contains(shaderName)) continue;
-                if (MigrateMaterial(mat)) count++;
-            }
-            if (count > 0)
-            {
-                AssetDatabase.SaveAssets();
-                Debug.Log($"[dennoko Specular] Migrated {count} material(s) to schema v1 (log smoothness scale).");
-            }
-        }
-
-        // Returns true if the material was migrated.
-        static bool MigrateMaterial(Material mat)
-        {
-            // Detect old materials: _SchemaVersion is absent from the .mat file (Unity returns shader default 0)
-            // We distinguish by reading the raw YAML — old files won't contain "_SchemaVersion"
-            string path = AssetDatabase.GetAssetPath(mat);
-            if (!string.IsNullOrEmpty(path) && File.Exists(path))
-            {
-                string yaml = File.ReadAllText(path);
-                if (yaml.Contains("_SchemaVersion")) return false; // already written → skip
-            }
-            else if ((int)mat.GetFloat("_SchemaVersion") >= 1)
-            {
-                return false;
-            }
-
-            float s1 = Mathf.Clamp01(mat.GetFloat("_SpecSmoothness1"));
-            float s2 = Mathf.Clamp01(mat.GetFloat("_SpecSmoothness2"));
-            mat.SetFloat("_SpecSmoothness1", Mathf.Clamp01((Mathf.Log(Mathf.Max(8f + 1016f * s1, 1e-6f), 2f) - 3f) / 7f));
-            mat.SetFloat("_SpecSmoothness2", Mathf.Clamp01((Mathf.Log(Mathf.Max(8f + 1016f * s2, 1e-6f), 2f) - 3f) / 7f));
-            mat.SetFloat("_SchemaVersion", 1f);
-            EditorUtility.SetDirty(mat);
-            return true;
         }
 
         // You can create a menu like this

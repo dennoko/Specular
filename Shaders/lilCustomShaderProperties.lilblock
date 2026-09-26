@@ -56,7 +56,7 @@
                                 _SpecF0Color2                 ("Fresnel Rim Color 2", Color) = (1,1,1,1)
                                 _SpecFresnelStrength2         ("Fresnel Rim Strength 2", Range(0,5)) = 1
 
-                [HideInInspector] _SchemaVersion              ("Schema Version", Float) = 0
+                [HideInInspector] _SchemaVersion              ("Schema Version", Float) = 2
         //----------------------------------------------------------------------------------------------------------------------
         // Custom MatCap 1
                 [lilToggle]     _CustomMatCap1_Enable         ("Enable MatCap 1", Float) = 0
